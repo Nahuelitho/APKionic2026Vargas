@@ -1,0 +1,7 @@
+{
+  "name": "multitenant-vargas",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
