@@ -1,10 +1,26 @@
 <template>
-  <comp-page
-    titulo="Productos"
-    :mostrar_actualizar="true"
-    @actualizar="actualizar"
-  >
+  <comp-page titulo="Productos" :mostrar_actualizar="true" @actualizar="actualizar">
     <comp-esqueleto v-if="cargando" />
+
+    <ion-card v-else-if="error">
+      <ion-card-header>
+        <ion-card-title>No se pudieron cargar los productos</ion-card-title>
+      </ion-card-header>
+
+      <ion-card-content>
+        <p>{{ error }}</p>
+
+        <ion-button expand="block" @click="cargar">
+          Reintentar
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card v-else-if="!hay_productos">
+      <ion-card-content>
+        No hay productos cargados.
+      </ion-card-content>
+    </ion-card>
 
     <ion-list v-else>
       <ion-item v-for="producto in productos" :key="producto.id">
@@ -23,10 +39,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 
 import {
   IonBadge,
+  IonButton,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonItem,
   IonLabel,
   IonList,
@@ -34,26 +55,18 @@ import {
 
 import CompPage from '../components/base/comp-page.vue';
 import CompEsqueleto from '../components/base/comp-esqueleto.vue';
-import { obtener_productos } from '../datos/productos';
+import { use_productos_store } from '../stores/productos_store';
 
-type Producto = {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  stock: boolean;
-};
-
-const productos = ref<Producto[]>([]);
-const cargando = ref(false);
+const {
+  productos,
+  cargando,
+  error,
+  hay_productos,
+  cargar_productos,
+} = use_productos_store();
 
 async function cargar() {
-  cargando.value = true;
-
-  const respuesta = await obtener_productos() as { productos: Producto[] };
-  productos.value = respuesta.productos;
-
-  cargando.value = false;
+  await cargar_productos();
 }
 
 async function actualizar(event: CustomEvent) {
