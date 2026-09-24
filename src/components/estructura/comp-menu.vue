@@ -8,7 +8,7 @@
 
     <ion-content>
       <ion-list>
-        <ion-list-header>Principal</ion-list-header>
+        <ion-list-header>{{ sesion.usuario.value?.nombre }}</ion-list-header>
 
         <ion-menu-toggle
           v-for="item in principales"
@@ -66,6 +66,8 @@ import {
 } from '@ionic/vue';
 
 import { navegacion_ordenada } from '../../config/navegacion';
+import { computed } from 'vue';
+import { sesion } from '../../services/auth_service';
 
 defineProps({
   content_id: {
@@ -74,6 +76,7 @@ defineProps({
   },
 });
 
-const principales = navegacion_ordenada.filter((item) => item.grupo === 'principal');
-const configuracion = navegacion_ordenada.filter((item) => item.grupo === 'configuracion');
+const permitidos = computed(() => navegacion_ordenada.filter((item) => !item.roles || item.roles.includes(sesion.usuario.value?.rol || '')));
+const principales = computed(() => permitidos.value.filter((item) => item.grupo === 'principal'));
+const configuracion = computed(() => permitidos.value.filter((item) => item.grupo === 'configuracion'));
 </script>

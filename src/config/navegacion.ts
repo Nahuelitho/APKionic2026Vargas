@@ -5,6 +5,7 @@ import ProductosPage from '../views/ProductosPage.vue';
 import ClientesPage from '../views/ClientesPage.vue';
 import PedidosPage from '../views/PedidosPage.vue';
 import MiCuentaPage from '../views/MiCuentaPage.vue';
+import UsuariosPage from '../views/UsuariosPage.vue';
 
 import {
   homeOutline,
@@ -12,6 +13,7 @@ import {
   peopleOutline,
   receiptOutline,
   personCircleOutline,
+  personAddOutline,
 } from 'ionicons/icons';
 
 export type ItemNavegacion = {
@@ -23,6 +25,8 @@ export type ItemNavegacion = {
   grupo: 'principal' | 'configuracion';
   tab: boolean;
   componente: Component;
+  roles?: string[];
+  tab_roles?: string[];
 };
 
 export const navegacion: ItemNavegacion[] = [
@@ -45,6 +49,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: ProductosPage,
+    roles: ['administrador', 'vendedor'],
+    tab_roles: ['administrador', 'vendedor'],
   },
   {
     id: 'clientes',
@@ -55,6 +61,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: ClientesPage,
+    roles: ['administrador', 'vendedor'],
+    tab_roles: ['administrador', 'vendedor'],
   },
   {
     id: 'pedidos',
@@ -65,6 +73,20 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: PedidosPage,
+    roles: ['administrador', 'vendedor', 'caja'],
+    tab_roles: ['administrador', 'vendedor', 'caja'],
+  },
+  {
+    id: 'usuarios',
+    titulo: 'Usuarios',
+    ruta: '/app/usuarios',
+    icono: personAddOutline,
+    orden: 45,
+    grupo: 'configuracion',
+    tab: false,
+    componente: UsuariosPage,
+    roles: ['administrador'],
+    tab_roles: [],
   },
   {
     id: 'mi-cuenta',

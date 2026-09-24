@@ -21,6 +21,12 @@ import {
 } from '@ionic/vue';
 
 import { navegacion_ordenada } from '../../config/navegacion';
+import { computed } from 'vue';
+import { sesion } from '../../services/auth_service';
 
-const tabs = navegacion_ordenada.filter((item) => item.tab);
+const tabs = computed(() => navegacion_ordenada.filter((item) => {
+  if (!item.tab) return false;
+  const roles = item.tab_roles ?? item.roles;
+  return !roles || roles.includes(sesion.usuario.value?.rol || '');
+}));
 </script>

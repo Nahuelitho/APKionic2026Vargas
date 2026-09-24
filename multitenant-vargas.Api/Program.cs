@@ -2,7 +2,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using multitenant_vargas.Api.Data;
+using multitenant_vargas.Api.Services;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +20,21 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddControllers().AddJsonOptions(options => ConfigurarJson(options.JsonSerializerOptions));
 builder.Services.ConfigureHttpJsonOptions(options => ConfigurarJson(options.SerializerOptions));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }] = []
+    });
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(corsPolicy, policy =>
@@ -31,6 +51,43 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         new MySqlServerVersion(new Version(8, 0, 0))
     ).UseSnakeCaseNamingConvention()
 );
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = TokenService.ObtenerClave(builder.Configuration),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var idTexto = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!long.TryParse(idTexto, out var id)) { context.Fail("Identidad inválida."); return; }
+                var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var actual = await db.Usuarios.AsNoTracking().Where(x => x.Id == id)
+                    .Select(x => new { x.Activo, Rol = x.Rol == null || !x.Rol.Activo ? null : x.Rol.Codigo })
+                    .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (actual is null || !actual.Activo) { context.Fail("El usuario ya no está activo."); return; }
+                if (actual.Rol != context.Principal?.FindFirstValue(ClaimTypes.Role))
+                    context.Fail("El rol del usuario cambió; volvé a iniciar sesión.");
+            }
+        };
+    });
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 var app = builder.Build();
 app.UseCors(corsPolicy);
@@ -40,11 +97,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTimeOffset.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTimeOffset.UtcNow })).AllowAnonymous();
 
 app.Run();
 
