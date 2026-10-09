@@ -7,7 +7,9 @@ public sealed class Usuario
     public required string Email { get; set; }
     public required string PasswordHash { get; set; }
     public bool Activo { get; set; } = true;
+    // Legacy data retained for an additive migration. Authorization uses UsuarioRoles only.
     public long? RolId { get; set; }
     public Rol? Rol { get; set; }
+    public ICollection<UsuarioRol> UsuarioRoles { get; set; } = [];
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
 }

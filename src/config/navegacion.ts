@@ -6,6 +6,7 @@ import ClientesPage from '../views/ClientesPage.vue';
 import PedidosPage from '../views/PedidosPage.vue';
 import MiCuentaPage from '../views/MiCuentaPage.vue';
 import UsuariosPage from '../views/UsuariosPage.vue';
+import EmpresasPage from '../views/EmpresasPage.vue';
 
 import {
   homeOutline,
@@ -31,6 +32,10 @@ export type ItemNavegacion = {
 
 export const navegacion: ItemNavegacion[] = [
   {
+    id: 'empresas', titulo: 'Empresas', ruta: '/app/empresas', icono: peopleOutline,
+    orden: 44, grupo: 'configuracion', tab: false, componente: EmpresasPage, roles: ['superadmin'],
+  },
+  {
     id: 'inicio',
     titulo: 'Inicio',
     ruta: '/app/inicio',
@@ -49,8 +54,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: ProductosPage,
-    roles: ['administrador', 'vendedor'],
-    tab_roles: ['administrador', 'vendedor'],
+    tab_roles: ['superadmin', 'administrador', 'vendedor', ''],
   },
   {
     id: 'clientes',
@@ -61,8 +65,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: ClientesPage,
-    roles: ['administrador', 'vendedor'],
-    tab_roles: ['administrador', 'vendedor'],
+    roles: ['superadmin', 'administrador', 'vendedor'],
+    tab_roles: ['superadmin', 'administrador', 'vendedor'],
   },
   {
     id: 'pedidos',
@@ -73,8 +77,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: PedidosPage,
-    roles: ['administrador', 'vendedor', 'caja'],
-    tab_roles: ['administrador', 'vendedor', 'caja'],
+    tab_roles: ['superadmin', 'administrador', 'vendedor', 'caja', ''],
   },
   {
     id: 'usuarios',
@@ -85,7 +88,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'configuracion',
     tab: false,
     componente: UsuariosPage,
-    roles: ['administrador'],
+    roles: ['superadmin', 'administrador'],
     tab_roles: [],
   },
   {

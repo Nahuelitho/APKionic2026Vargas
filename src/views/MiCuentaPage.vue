@@ -8,11 +8,11 @@
 
       <ion-card-content>
         <ion-text v-if="!sesion.usuario.value?.rol" color="warning">
-          <p>Tu cuenta todavía no tiene un rol asignado. Un administrador debe habilitarla antes de que puedas operar.</p>
+          <p>Cuenta de usuario comun: podes consultar las empresas y sus productos, crear pedidos y ver solamente tus propios pedidos.</p>
         </ion-text>
         <ion-list>
           <ion-item>
-            <ion-label><h3>{{ sesion.usuario.value?.nombre }}</h3><p>{{ sesion.usuario.value?.email }} · {{ sesion.usuario.value?.rol || 'Sin rol' }}</p></ion-label>
+            <ion-label><h3>{{ sesion.usuario.value?.nombre }}</h3><p>{{ sesion.usuario.value?.email }} · {{ sesion.usuario.value?.rol || 'Usuario comun' }}</p><p v-if="sesion.usuario.value?.empresa_id">Empresa {{ sesion.usuario.value.empresa_id }}</p></ion-label>
           </ion-item>
           <ion-item>
             <ion-label>
@@ -24,6 +24,10 @@
               :checked="tema_oscuro"
               @ionChange="cambiar_tema"
             />
+          </ion-item>
+          <ion-item>
+            <ion-label><h3>Vibración</h3><p>Avisar con vibración cuando ocurre un error</p></ion-label>
+            <ion-toggle :checked="vibracion" @ionChange="cambiar_vibracion" />
           </ion-item>
           <ion-item>
             <ion-label><h3>Desbloqueo facial</h3><p>Usá el reconocimiento facial registrado en el teléfono</p></ion-label>
@@ -57,6 +61,7 @@ import {
 
 import CompPage from '../components/base/comp-page.vue';
 import { cerrar_sesion, configurar_biometria, sesion } from '../services/auth_service';
+import { configurar_vibracion, vibracion_activada, vibrar_error } from '../services/vibracion_service';
 
 const CLAVE_TEMA = 'tema_oscuro';
 
@@ -64,6 +69,13 @@ const tema_oscuro = ref(localStorage.getItem(CLAVE_TEMA) === 'true');
 const router = useRouter();
 const biometria = ref(sesion.biometria_activa.value);
 const error_biometria = ref('');
+const vibracion = ref(vibracion_activada());
+
+function cambiar_vibracion(event: CustomEvent) {
+  vibracion.value = Boolean(event.detail.checked);
+  configurar_vibracion(vibracion.value);
+  if (vibracion.value) void vibrar_error();
+}
 
 function aplicar_tema(oscuro: boolean) {
   document.documentElement.classList.toggle('ion-palette-dark', oscuro);

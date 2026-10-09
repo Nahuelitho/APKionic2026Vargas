@@ -4,7 +4,7 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Capacitor } from '@capacitor/core';
 import { obtener_api_url } from '../config/debug';
 
-export type UsuarioSesion = { id: number; nombre: string; email: string; rol: string | null };
+export type UsuarioSesion = { id: number; nombre: string; email: string; rol: string | null; empresa_id: number | null };
 type SesionResponse = { access_token: string; refresh_token: string; expira_utc: string; usuario: UsuarioSesion };
 
 const CLAVE_TOKEN = 'vargas_token';
@@ -57,8 +57,8 @@ async function cargar_usuario(): Promise<boolean> {
   return true;
 }
 
-export async function iniciar_sesion(email: string, password: string) {
-  await guardar_sesion(await solicitar('login', { email, password }));
+export async function iniciar_sesion(email: string, password: string, empresa_id?: number) {
+  await guardar_sesion(await solicitar('login', { email, password, empresa_id }));
 }
 
 export async function renovar_sesion(): Promise<boolean> {
@@ -116,5 +116,5 @@ export const sesion = {
   usuario, restaurando,
   autenticado: computed(() => Boolean(usuario.value && access_token)),
   biometria_activa: computed(() => localStorage.getItem(CLAVE_BIOMETRIA) === 'true'),
-  es_admin: computed(() => usuario.value?.rol === 'administrador'),
+  es_admin: computed(() => ['superadmin', 'administrador'].includes(usuario.value?.rol || '')),
 };

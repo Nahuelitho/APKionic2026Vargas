@@ -1,5 +1,6 @@
 import { obtener_api_url } from '../config/debug';
 import { limpiar_sesion, obtener_access_token, renovar_sesion } from './auth_service';
+import { vibrar_error } from './vibracion_service';
 
 const api_url = obtener_api_url();
 
@@ -24,6 +25,7 @@ function construir_url(endpoint: string) {
 }
 
 function normalizar_error(error: unknown): AjaxError {
+  void vibrar_error();
   console.error('ERROR AJAX:', error);
 
   if (typeof error === 'object' && error !== null && 'estado_http' in error) return error as AjaxError;
@@ -55,6 +57,7 @@ function normalizar_error(error: unknown): AjaxError {
 type AjaxRequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
+  binario?: boolean;
 };
 
 export async function ajax_request<T>(
@@ -74,6 +77,7 @@ export async function ajax_request<T>(
     }
 
     console.log('HTTP STATUS:', respuesta.status);
+    if (respuesta.ok && options.binario) return await respuesta.blob() as T;
     const respuesta_json = await respuesta.json().catch(() => null);
     console.log('RESPUESTA API:', respuesta_json);
 
@@ -91,15 +95,20 @@ export async function ajax_request<T>(
   }
 }
 
+export function ajax_binario(endpoint: string): Promise<Blob> {
+  return ajax_request<Blob>(endpoint, { binario: true });
+}
+
 function ejecutar_fetch(url: string, method: string, body?: unknown) {
   const token = obtener_access_token();
+  const es_form_data = body instanceof FormData;
   return fetch(url, {
       method,
       headers: {
-        Accept: 'application/json',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        Accept: 'application/json, application/pdf, image/png',
+        ...(body && !es_form_data ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: es_form_data ? body : body ? JSON.stringify(body) : undefined,
     });
 }

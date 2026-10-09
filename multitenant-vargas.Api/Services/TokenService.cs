@@ -9,7 +9,7 @@ namespace multitenant_vargas.Api.Services;
 
 public sealed class TokenService(IConfiguration configuration)
 {
-    public (string Token, DateTime ExpiraUtc) CrearAccessToken(Usuario usuario)
+    public (string Token, DateTime ExpiraUtc) CrearAccessToken(Usuario usuario, AmbitoSesion ambito, string sesionHash)
     {
         var expira = DateTime.UtcNow.AddMinutes(15);
         var claims = new List<Claim>
@@ -17,10 +17,13 @@ public sealed class TokenService(IConfiguration configuration)
             new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, usuario.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
-            new(ClaimTypes.Name, usuario.Nombre)
+            new(ClaimTypes.Name, usuario.Nombre),
+            new("ambito_version", "1"),
+            new("sesion", sesionHash)
         };
 
-        if (usuario.Rol is { Activo: true }) claims.Add(new Claim(ClaimTypes.Role, usuario.Rol.Codigo));
+        if (ambito.Rol is not null) claims.Add(new Claim(ClaimTypes.Role, ambito.Rol));
+        if (ambito.EmpresaId is not null) claims.Add(new Claim("empresa_id", ambito.EmpresaId.ToString()!));
 
         var token = new JwtSecurityToken(
             issuer: configuration["Jwt:Issuer"],

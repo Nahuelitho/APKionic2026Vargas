@@ -1,4 +1,5 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { sesion } from '../services/auth_service';
 import {
   actualizar_producto as actualizar_producto_api,
   crear_producto as crear_producto_api,
@@ -19,6 +20,11 @@ const pagina = ref(1);
 const tamanio = ref(5);
 const total = ref(0);
 const total_paginas = ref(0);
+let version = 0;
+watch(() => `${sesion.usuario.value?.id}:${sesion.usuario.value?.rol}:${sesion.usuario.value?.empresa_id}`, () => {
+  ++version; productos.value = []; total.value = 0; total_paginas.value = 0; pagina.value = 1;
+  cargando.value = false; error.value = null; error_formulario.value = null;
+}, { flush: 'sync' });
 
 const hay_productos = computed(() => productos.value.length > 0);
 const hay_mas_productos = computed(() => pagina.value < total_paginas.value);
@@ -26,12 +32,14 @@ const puede_ir_anterior = computed(() => pagina.value > 1);
 const puede_ir_siguiente = computed(() => pagina.value < total_paginas.value);
 
 async function cargar_productos() {
+  const actual = ++version;
   cargando.value = true;
   error.value = null;
   pagina.value = 1;
 
   try {
     const respuesta = await obtener_productos(pagina.value, tamanio.value);
+    if (actual !== version) return;
 
     productos.value = respuesta.productos;
     pagina.value = respuesta.pagina;
@@ -39,12 +47,13 @@ async function cargar_productos() {
     total.value = respuesta.total;
     total_paginas.value = respuesta.total_paginas;
   } catch (excepcion) {
+    if (actual !== version) return;
     const ajax_error = excepcion as { mensaje?: string };
 
     productos.value = [];
     error.value = ajax_error.mensaje || 'No se pudieron cargar los productos.';
   } finally {
-    cargando.value = false;
+    if (actual === version) cargando.value = false;
   }
 }
 
@@ -54,10 +63,12 @@ async function cargar_mas_productos() {
   }
 
   cargando.value = true;
+  const actual = version;
   error.value = null;
 
   try {
     const respuesta = await obtener_productos(pagina.value + 1, tamanio.value);
+    if (actual !== version) return;
     const ids_conocidos = productos.value.map((producto) => producto.id);
 
     productos.value = [
@@ -69,11 +80,12 @@ async function cargar_mas_productos() {
     total.value = respuesta.total;
     total_paginas.value = respuesta.total_paginas;
   } catch (excepcion) {
+    if (actual !== version) return;
     const ajax_error = excepcion as { mensaje?: string };
 
     error.value = ajax_error.mensaje || 'No se pudieron cargar mas productos.';
   } finally {
-    cargando.value = false;
+    if (actual === version) cargando.value = false;
   }
 }
 
@@ -86,9 +98,9 @@ async function crear_producto(producto: ProductoRequest) {
     await cargar_productos();
     return true;
   } catch (excepcion) {
-    const ajax_error = excepcion as { mensaje?: string };
+    const ajax_error = excepcion as { mensaje?: string; message?: string };
 
-    error_formulario.value = ajax_error.mensaje || 'No se pudo crear el producto.';
+    error_formulario.value = ajax_error.mensaje || ajax_error.message || 'No se pudo crear el producto.';
     return false;
   } finally {
     guardando.value = false;
@@ -104,9 +116,9 @@ async function actualizar_producto(id: number, producto: ProductoRequest) {
     await cargar_productos();
     return true;
   } catch (excepcion) {
-    const ajax_error = excepcion as { mensaje?: string };
+    const ajax_error = excepcion as { mensaje?: string; message?: string };
 
-    error_formulario.value = ajax_error.mensaje || 'No se pudo actualizar el producto.';
+    error_formulario.value = ajax_error.mensaje || ajax_error.message || 'No se pudo actualizar el producto.';
     return false;
   } finally {
     guardando.value = false;

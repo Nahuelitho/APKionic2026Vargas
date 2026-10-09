@@ -11,6 +11,8 @@ public sealed class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.ToTable("productos");
 
         builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.Id, x.EmpresaId });
+        builder.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.Id)
             .ValueGeneratedOnAdd();
@@ -27,5 +29,6 @@ public sealed class ProductoConfiguration : IEntityTypeConfiguration<Producto>
 
         builder.Property(x => x.Stock)
             .IsRequired();
+        builder.Property(x => x.FotoUrl).HasMaxLength(255);
     }
 }

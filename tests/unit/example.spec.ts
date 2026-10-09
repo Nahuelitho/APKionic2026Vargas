@@ -5,6 +5,7 @@ import { describe, expect, test } from 'vitest'
 describe('HomePage.vue', () => {
   test('renders home vue', () => {
     const wrapper = mount(HomePage)
-    expect(wrapper.text()).toMatch('Ready to create an app?')
+    expect(wrapper.text()).toContain('App Multi-tenant')
+    expect(wrapper.text()).toContain('Tiendas disponibles')
   })
 })

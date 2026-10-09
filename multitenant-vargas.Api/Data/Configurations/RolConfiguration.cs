@@ -16,7 +16,8 @@ public sealed class RolConfiguration : IEntityTypeConfiguration<Rol>
         builder.HasData(
             new Rol { Id = 1, Nombre = "Administrador", Codigo = "administrador", Activo = true },
             new Rol { Id = 2, Nombre = "Vendedor", Codigo = "vendedor", Activo = true },
-            new Rol { Id = 3, Nombre = "Caja", Codigo = "caja", Activo = true }
+            new Rol { Id = 3, Nombre = "Caja", Codigo = "caja", Activo = true },
+            new Rol { Id = 4, Nombre = "Superadmin", Codigo = "superadmin", Activo = true }
         );
     }
 }
