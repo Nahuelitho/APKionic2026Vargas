@@ -7,6 +7,7 @@ import PedidosPage from '../views/PedidosPage.vue';
 import MiCuentaPage from '../views/MiCuentaPage.vue';
 import UsuariosPage from '../views/UsuariosPage.vue';
 import EmpresasPage from '../views/EmpresasPage.vue';
+import ComprarPage from '../views/ComprarPage.vue';
 
 import {
   homeOutline,
@@ -15,6 +16,7 @@ import {
   receiptOutline,
   personCircleOutline,
   personAddOutline,
+  storefrontOutline,
 } from 'ionicons/icons';
 
 export type ItemNavegacion = {
@@ -32,6 +34,10 @@ export type ItemNavegacion = {
 
 export const navegacion: ItemNavegacion[] = [
   {
+    id: 'comprar', titulo: 'Empresas', ruta: '/app/comprar', icono: storefrontOutline,
+    orden: 10, grupo: 'principal', tab: true, componente: ComprarPage, roles: [''],
+  },
+  {
     id: 'empresas', titulo: 'Empresas', ruta: '/app/empresas', icono: peopleOutline,
     orden: 44, grupo: 'configuracion', tab: false, componente: EmpresasPage, roles: ['superadmin'],
   },
@@ -44,6 +50,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: InicioPage,
+    roles: ['superadmin', 'administrador', 'vendedor', 'caja'],
   },
   {
     id: 'productos',
@@ -54,7 +61,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal',
     tab: true,
     componente: ProductosPage,
-    tab_roles: ['superadmin', 'administrador', 'vendedor', ''],
+    roles: ['superadmin', 'administrador', 'vendedor'],
   },
   {
     id: 'clientes',
@@ -104,3 +111,18 @@ export const navegacion: ItemNavegacion[] = [
 ];
 
 export const navegacion_ordenada = [...navegacion].sort((a, b) => a.orden - b.orden);
+
+export function ruta_inicial(rol: string | null | undefined): string {
+  if (!rol) return '/app/comprar';
+  if (rol === 'superadmin') return '/app/empresas';
+  if (rol === 'caja') return '/app/pedidos';
+  return '/app/inicio';
+}
+
+export function puede_ver_item(item: ItemNavegacion, rol: string | null | undefined): boolean {
+  return !item.roles || item.roles.includes(rol || '');
+}
+
+export function titulo_item(item: ItemNavegacion, rol: string | null | undefined): string {
+  return item.id === 'pedidos' && !rol ? 'Mis pedidos' : item.titulo;
+}

@@ -6,7 +6,19 @@ import { crear_pedido } from '../../src/services/pedidos_service';
 import { ajax_binario, ajax_request } from '../../src/services/ajax_service';
 import PedidosPage from '../../src/views/PedidosPage.vue';
 import ProductosPage from '../../src/views/ProductosPage.vue';
-import { navegacion } from '../../src/config/navegacion';
+import ComprarPage from '../../src/views/ComprarPage.vue';
+import CatalogoPage from '../../src/views/CatalogoPage.vue';
+import CompPedidoFormulario from '../../src/components/comp-pedido-formulario.vue';
+import { obtener_empresas } from '../../src/services/empresas_service';
+import { navegacion, puede_ver_item, ruta_inicial, titulo_item } from '../../src/config/navegacion';
+
+const rutas = vi.hoisted(() => ({ route: { params: { empresaId: '2' }, query: {} as Record<string, string> }, push: vi.fn() }));
+vi.mock('vue-router', async () => ({
+  ...await vi.importActual<any>('vue-router'),
+  useRoute: () => rutas.route,
+  useRouter: () => ({ push: rutas.push }),
+  onBeforeRouteLeave: vi.fn(), onBeforeRouteUpdate: vi.fn(),
+}));
 
 vi.mock('../../src/services/ajax_service', () => ({ ajax_request: vi.fn(), ajax_binario: vi.fn() }));
 vi.mock('../../src/services/empresas_service', () => ({ obtener_empresas: vi.fn(async () => [
@@ -32,6 +44,10 @@ const global = { renderStubDefaultSlot: true, stubs: {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rutas.route.params.empresaId = '2'; rutas.route.query = {};
+  vi.mocked(obtener_empresas).mockResolvedValue([
+    { id: 1, nombre_empresa: 'Vargas', activo: true }, { id: 2, nombre_empresa: 'Segunda', activo: true },
+  ]);
   sesion.usuario.value = { id: 3, nombre: 'Comun', email: 'comun@test.com', rol: null, empresa_id: null };
   vi.mocked(ajax_request).mockImplementation(async (ruta: string) => {
     if (ruta === '/api/pedidos') return { pedidos: [pedido] };
@@ -56,10 +72,11 @@ describe('Multiempresa', () => {
     } });
   });
 
-  test('el comun ve mis pedidos y seleccion de empresa, sin PDF ni cambios de estado', async () => {
+  test('el comun ve solo historial y detalle, sin formulario, PDF ni cambios de estado', async () => {
     const wrapper = mount(PedidosPage, { global }); await flushPromises();
     expect(wrapper.text()).toContain('Mis pedidos');
-    expect(wrapper.findAll('ion-select-option-stub').map(x => x.text())).toEqual(['Vargas', 'Segunda']);
+    expect(wrapper.text()).toContain('Elegir empresa');
+    expect(wrapper.findComponent(CompPedidoFormulario).exists()).toBe(false);
     const fila = wrapper.findAll('ion-item-stub').find(x => x.text().includes('PED-0001'))!;
     await fila.trigger('click'); await flushPromises();
     expect(wrapper.text()).toContain('Ver QR');
@@ -68,25 +85,91 @@ describe('Multiempresa', () => {
     wrapper.unmount();
   });
 
-  test('catalogo comun agrupado y paginacion disponible sin acciones de gestion', async () => {
-    const wrapper = mount(ProductosPage, { global }); await flushPromises();
-    expect(wrapper.findAll('ion-item-divider-stub').map(x => x.text())).toEqual(['Vargas', 'Segunda']);
-    expect(wrapper.text()).toContain('Ver mas');
+  test('el comprador abre el catalogo de la empresa elegida, sin acciones de gestion', async () => {
+    const wrapper = mount(CatalogoPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('Segunda');
+    expect(wrapper.text()).toContain('Producto 201');
+    expect(wrapper.text()).not.toContain('Producto 101');
+    expect(wrapper.text()).toContain('Siguiente');
     expect(wrapper.text()).not.toContain('Editar');
     expect(wrapper.text()).not.toContain('Borrar');
+    await wrapper.findAll('ion-button-stub').find(x => x.text() === 'Siguiente')!.trigger('click');
+    await flushPromises();
+    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=2&tamanio=10&empresa_id=2');
     wrapper.unmount();
   });
 
   test('cambiar empresa filtra el catalogo y elimina productos de la seleccion anterior', async () => {
-    const wrapper = mount(PedidosPage, { global }); await flushPromises();
+    sesion.usuario.value = { id: 1, nombre: 'Admin', email: 'admin@test.com', rol: 'superadmin', empresa_id: null };
+    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const wrapper = mount(CompPedidoFormulario, { global }); await flushPromises();
     await wrapper.findAll('ion-button-stub').find(x => x.text() === 'Agregar')!.trigger('click');
     expect(wrapper.text()).toContain('por unidad');
     const selector = wrapper.findComponent('ion-select-stub');
-    selector.vm.$emit('update:modelValue', 2);
+    selector.vm.$emit('ionChange', { detail: { value: 2 } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('por unidad');
+    expect(ajax_request).not.toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2');
+    confirmar.mockReturnValue(true);
     selector.vm.$emit('ionChange', { detail: { value: 2 } });
     await flushPromises();
     expect(wrapper.text()).not.toContain('por unidad');
     expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2');
+    wrapper.unmount();
+    confirmar.mockRestore();
+  });
+
+  test('elegir empresa muestra solo activas sin controles administrativos', async () => {
+    vi.mocked(obtener_empresas).mockResolvedValue([
+      { id: 1, nombre_empresa: 'Vargas', activo: true }, { id: 2, nombre_empresa: 'Cerrada', activo: false },
+    ]);
+    const wrapper = mount(ComprarPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('Vargas');
+    expect(wrapper.text()).not.toContain('Cerrada');
+    expect(wrapper.text()).not.toContain('Guardar');
+    expect(wrapper.findComponent('ion-item-stub').props('routerLink')).toBe('/app/catalogo/1');
+    wrapper.unmount();
+  });
+
+  test('una empresa inexistente no carga productos ni permite crear un pedido', async () => {
+    rutas.route.params.empresaId = '99';
+    const wrapper = mount(CatalogoPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('La empresa no existe o no esta activa');
+    expect(wrapper.findComponent(CompPedidoFormulario).exists()).toBe(false);
+    expect(ajax_request).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  test('comprar confirma el pedido y abre su detalle en Mis pedidos', async () => {
+    vi.mocked(ajax_request).mockImplementation(async (ruta, opciones) => {
+      if (opciones?.method === 'POST') return { ...pedido, id: 8 };
+      return { productos: [producto(201, 2, 'Segunda')], pagina: 1, total_paginas: 1 };
+    });
+    const wrapper = mount(CatalogoPage, { global }); await flushPromises();
+    wrapper.findComponent('ion-input-stub').vm.$emit('update:modelValue', 'Ana');
+    await wrapper.findAll('ion-button-stub').find(x => x.text() === 'Agregar')!.trigger('click');
+    await wrapper.findAll('ion-button-stub').find(x => x.text() === 'Confirmar pedido')!.trigger('click');
+    await flushPromises();
+    expect(ajax_request).toHaveBeenCalledWith('/api/pedidos', { method: 'POST', body: {
+      cliente: 'Ana', empresa_id: 2, items: [{ productoId: 201, cantidad: 1 }],
+    } });
+    expect(rutas.push).toHaveBeenCalledWith({ path: '/app/pedidos', query: { pedido: '8' } });
+    wrapper.unmount();
+  });
+
+  test('Mis pedidos abre el detalle indicado al finalizar la compra', async () => {
+    rutas.route.query = { pedido: '1' };
+    const wrapper = mount(PedidosPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('Ver QR');
+    expect(ajax_request).toHaveBeenCalledWith('/api/pedidos/1');
+    wrapper.unmount();
+  });
+
+  test('personal conserva la gestion de productos', async () => {
+    sesion.usuario.value = { id: 1, nombre: 'Admin', email: 'admin@test.com', rol: 'administrador', empresa_id: 1 };
+    const wrapper = mount(ProductosPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('Nuevo producto');
+    expect(wrapper.text()).toContain('Editar');
     wrapper.unmount();
   });
 
@@ -94,5 +177,15 @@ describe('Multiempresa', () => {
     expect(navegacion.find(x => x.id === 'empresas')?.roles).toEqual(['superadmin']);
     expect(navegacion.find(x => x.id === 'usuarios')?.roles).toEqual(['superadmin', 'administrador']);
     expect(navegacion.find(x => x.id === 'pedidos')?.roles).toBeUndefined();
+  });
+
+  test('entrada y menu corresponden al perfil sin otorgar una membresia al comprador', () => {
+    expect(ruta_inicial(null)).toBe('/app/comprar');
+    expect(ruta_inicial('superadmin')).toBe('/app/empresas');
+    expect(ruta_inicial('caja')).toBe('/app/pedidos');
+    expect(ruta_inicial('vendedor')).toBe('/app/inicio');
+    expect(navegacion.filter(x => puede_ver_item(x, null)).map(x => x.id)).toEqual(['comprar', 'pedidos', 'mi-cuenta']);
+    expect(titulo_item(navegacion.find(x => x.id === 'pedidos')!, null)).toBe('Mis pedidos');
+    expect(puede_ver_item(navegacion.find(x => x.id === 'productos')!, 'caja')).toBe(false);
   });
 });

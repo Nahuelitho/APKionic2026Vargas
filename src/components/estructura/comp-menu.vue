@@ -22,7 +22,7 @@
             router-direction="root"
           >
             <ion-icon slot="start" :icon="item.icono" />
-            <ion-label>{{ item.titulo }}</ion-label>
+            <ion-label>{{ titulo_item(item, sesion.usuario.value?.rol) }}</ion-label>
           </ion-item>
         </ion-menu-toggle>
       </ion-list>
@@ -42,7 +42,7 @@
             router-direction="root"
           >
             <ion-icon slot="start" :icon="item.icono" />
-            <ion-label>{{ item.titulo }}</ion-label>
+            <ion-label>{{ titulo_item(item, sesion.usuario.value?.rol) }}</ion-label>
           </ion-item>
         </ion-menu-toggle>
       </ion-list>
@@ -65,7 +65,7 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 
-import { navegacion_ordenada } from '../../config/navegacion';
+import { navegacion_ordenada, puede_ver_item, titulo_item } from '../../config/navegacion';
 import { computed } from 'vue';
 import { sesion } from '../../services/auth_service';
 
@@ -76,7 +76,7 @@ defineProps({
   },
 });
 
-const permitidos = computed(() => navegacion_ordenada.filter((item) => !item.roles || item.roles.includes(sesion.usuario.value?.rol || '')));
+const permitidos = computed(() => navegacion_ordenada.filter((item) => puede_ver_item(item, sesion.usuario.value?.rol)));
 const principales = computed(() => permitidos.value.filter((item) => item.grupo === 'principal'));
 const configuracion = computed(() => permitidos.value.filter((item) => item.grupo === 'configuracion'));
 </script>

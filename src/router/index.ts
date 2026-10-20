@@ -2,8 +2,9 @@ import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 
 import MainLayout from '../layouts/main_layout.vue';
-import { navegacion, type ItemNavegacion } from '../config/navegacion';
+import { navegacion, ruta_inicial, type ItemNavegacion } from '../config/navegacion';
 import LoginPage from '../views/LoginPage.vue';
+import CatalogoPage from '../views/CatalogoPage.vue';
 import { restaurar_sesion, sesion } from '../services/auth_service';
 
 const rutasApp = navegacion.map((item: ItemNavegacion) => ({
@@ -22,11 +23,15 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/app',
     component: MainLayout,
-    children: rutasApp,
+    children: [
+      { path: '', redirect: () => ruta_inicial(sesion.usuario.value?.rol) },
+      ...rutasApp,
+      { path: 'catalogo/:empresaId', name: 'catalogo', component: CatalogoPage, meta: { roles: [''] } },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/app/inicio',
+    redirect: () => ruta_inicial(sesion.usuario.value?.rol),
   },
 ];
 
@@ -37,10 +42,10 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const autenticado = sesion.autenticado.value || await restaurar_sesion();
-  if (to.meta.publica) return autenticado ? '/app/inicio' : true;
+  if (to.meta.publica) return autenticado ? ruta_inicial(sesion.usuario.value?.rol) : true;
   if (!autenticado) return '/login';
   const roles = to.meta.roles as string[] | undefined;
-  if (roles && !roles.includes(sesion.usuario.value?.rol || '')) return '/app/inicio';
+  if (roles && !roles.includes(sesion.usuario.value?.rol || '')) return ruta_inicial(sesion.usuario.value?.rol);
   return true;
 });
 
