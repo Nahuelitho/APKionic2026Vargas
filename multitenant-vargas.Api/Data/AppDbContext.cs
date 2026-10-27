@@ -5,6 +5,8 @@ namespace multitenant_vargas.Api.Data;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<PedidoItem> PedidoItems => Set<PedidoItem>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
@@ -12,7 +14,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
-    public DbSet<PedidoItem> PedidoItems => Set<PedidoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

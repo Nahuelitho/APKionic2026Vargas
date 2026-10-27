@@ -24,8 +24,8 @@ function construir_url(endpoint: string) {
   return url;
 }
 
-function normalizar_error(error: unknown): AjaxError {
-  void vibrar_error();
+function normalizar_error(error: unknown, silencioso = false): AjaxError {
+  if (!silencioso) void vibrar_error();
   console.error('ERROR AJAX:', error);
 
   if (typeof error === 'object' && error !== null && 'estado_http' in error) return error as AjaxError;
@@ -58,6 +58,7 @@ type AjaxRequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   binario?: boolean;
+  silencioso?: boolean;
 };
 
 export async function ajax_request<T>(
@@ -91,7 +92,7 @@ export async function ajax_request<T>(
     }
     return respuesta_json as T;
   } catch (error) {
-    throw normalizar_error(error);
+    throw normalizar_error(error, options.silencioso);
   }
 }
 

@@ -80,6 +80,7 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
             logger.LogError(ex, "No se pudo guardar el pedido.");
             return StatusCode(500, new { codigo = "pedido_no_guardado", mensaje = "No se pudo guardar el pedido. Vuelva a intentarlo." });
         }
+        await NotificarVendedoresAsync(pedido, ct);
         return CreatedAtAction(nameof(Obtener), new { id = pedido.Id }, Respuesta(pedido));
     }
 
@@ -105,6 +106,7 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
             logger.LogError(ex, "No se pudo actualizar el pedido {PedidoId}.", id);
             return StatusCode(500, new { codigo = "pedido_no_guardado", mensaje = "No se pudo guardar el estado del pedido." });
         }
+        await NotificarCambioEstadoAsync(pedido, ct);
         return Ok(Respuesta(pedido));
     }
 
@@ -173,6 +175,68 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
             });
         })).GeneratePdf();
         return File(pdf, "application/pdf", $"PED-{id:D4}.pdf");
+    }
+
+    private async Task NotificarVendedoresAsync(Pedido pedido, CancellationToken ct)
+    {
+        try
+        {
+            var actor = AmbitoService.UsuarioId(User);
+            // Interesados: admin y vendedores de esa empresa, menos el que hizo el pedido.
+            var destinatarios = await db.UsuarioRoles.AsNoTracking()
+                .Where(x => x.EmpresaId == pedido.EmpresaId
+                    && x.UsuarioId != actor
+                    && x.Usuario.Activo
+                    && (x.Rol.Codigo == "administrador" || x.Rol.Codigo == "vendedor"))
+                .Select(x => x.UsuarioId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var usuarioId in destinatarios)
+            {
+                db.Notificaciones.Add(new Notificacion
+                {
+                    UsuarioId = usuarioId,
+                    EmpresaId = pedido.EmpresaId,
+                    PedidoId = pedido.Id,
+                    Titulo = "Nuevo pedido",
+                    Mensaje = $"PED-{pedido.Id:D4}: {pedido.Cliente} pidio por {pedido.Total.ToString("C2", CultureInfo.GetCultureInfo("es-AR"))}.",
+                    Fecha = DateTime.UtcNow,
+                });
+            }
+
+            if (destinatarios.Count > 0) await db.SaveChangesAsync(ct);
+            logger.LogInformation("Pedido {PedidoId}: {Cantidad} notificaciones creadas.", pedido.Id, destinatarios.Count);
+        }
+        catch (Exception ex)
+        {
+            // Una notificacion fallida no debe romper la creacion del pedido.
+            logger.LogError(ex, "No se pudieron crear las notificaciones del pedido {PedidoId}.", pedido.Id);
+        }
+    }
+
+    private async Task NotificarCambioEstadoAsync(Pedido pedido, CancellationToken ct)
+    {
+        try
+        {
+            // El que cambia el estado NO se auto-notifica: la campana sube en el otro.
+            if (pedido.UsuarioId == AmbitoService.UsuarioId(User)) return;
+
+            db.Notificaciones.Add(new Notificacion
+            {
+                UsuarioId = pedido.UsuarioId,
+                EmpresaId = pedido.EmpresaId,
+                PedidoId = pedido.Id,
+                Titulo = "Tu pedido cambio de estado",
+                Mensaje = $"PED-{pedido.Id:D4}: {pedido.Empresa.NombreEmpresa} marco el pedido como {pedido.Estado}.",
+                Fecha = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "No se pudo crear la notificacion del pedido {PedidoId}.", pedido.Id);
+        }
     }
 
     private NotFoundObjectResult NoEncontrado() => NotFound(new

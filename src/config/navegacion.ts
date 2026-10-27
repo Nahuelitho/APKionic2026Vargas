@@ -7,6 +7,7 @@ import PedidosPage from '../views/PedidosPage.vue';
 import MiCuentaPage from '../views/MiCuentaPage.vue';
 import UsuariosPage from '../views/UsuariosPage.vue';
 import EmpresasPage from '../views/EmpresasPage.vue';
+import MiEmpresaPage from '../views/MiEmpresaPage.vue';
 import ComprarPage from '../views/ComprarPage.vue';
 
 import {
@@ -34,12 +35,31 @@ export type ItemNavegacion = {
 
 export const navegacion: ItemNavegacion[] = [
   {
-    id: 'comprar', titulo: 'Empresas', ruta: '/app/comprar', icono: storefrontOutline,
-    orden: 10, grupo: 'principal', tab: true, componente: ComprarPage, roles: [''],
+    id: 'comprar', titulo: 'Tiendas', ruta: '/app/comprar', icono: storefrontOutline,
+    orden: 15, grupo: 'principal', tab: true, componente: ComprarPage, roles: [''],
   },
   {
-    id: 'empresas', titulo: 'Empresas', ruta: '/app/empresas', icono: peopleOutline,
-    orden: 44, grupo: 'configuracion', tab: false, componente: EmpresasPage, roles: ['superadmin'],
+    id: 'empresas',
+    titulo: 'Empresas',
+    ruta: '/app/empresas',
+    icono: storefrontOutline,
+    orden: 44,
+    grupo: 'configuracion',
+    tab: false,
+    componente: EmpresasPage,
+    // Admin y superadmin entran a la lista; desde ahí abren el detalle de cada empresa.
+    roles: ['superadmin', 'administrador'],
+  },
+  {
+    id: 'mi-empresa',
+    titulo: 'Mi Empresa',
+    ruta: '/app/mi-empresa',
+    icono: storefrontOutline,
+    orden: 43,
+    grupo: 'configuracion',
+    tab: false,
+    componente: MiEmpresaPage,
+    roles: ['vendedor'],
   },
   {
     id: 'inicio',

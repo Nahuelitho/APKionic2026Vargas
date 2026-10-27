@@ -7,7 +7,6 @@
         <ion-input v-model="password" name="password" autocomplete="current-password" type="password" label="Contraseña" label-placement="stacked" required>
           <ion-input-password-toggle slot="end" />
         </ion-input>
-        <ion-input v-model.number="empresa_id" type="number" label="ID de empresa (opcional para membresias multiples)" label-placement="stacked" min="1" />
         <ion-text v-if="error" color="danger"><p>{{ error }}</p></ion-text>
         <ion-button type="submit" expand="block" :disabled="cargando">{{ cargando ? 'Ingresando...' : 'Ingresar' }}</ion-button>
         </form>
@@ -26,11 +25,10 @@ import { ruta_inicial } from '../config/navegacion';
 import { vibrar_error } from '../services/vibracion_service';
 const router = useRouter();
 const email = ref(''); const password = ref(''); const error = ref(''); const cargando = ref(false);
-const empresa_id = ref<number | undefined>();
 async function ingresar() {
   if (cargando.value) return;
   error.value = ''; cargando.value = true;
-   try { await iniciar_sesion(email.value, password.value, empresa_id.value || undefined); await router.replace(ruta_inicial(sesion.usuario.value?.rol)); }
+   try { await iniciar_sesion(email.value, password.value); await router.replace(ruta_inicial(sesion.usuario.value?.rol)); }
   catch (e) { void vibrar_error(); error.value = e instanceof Error ? e.message : 'No se pudo ingresar.'; }
   finally { cargando.value = false; }
 }

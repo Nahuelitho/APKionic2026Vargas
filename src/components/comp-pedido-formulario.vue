@@ -1,43 +1,66 @@
 <template>
   <ion-card>
-    <ion-card-header><ion-card-title>{{ empresa ? 'Catalogo y carrito' : 'Nuevo pedido' }}</ion-card-title></ion-card-header>
+    <ion-card-header><ion-card-title>{{ empresa ? 'Catalogo y carrito' : 'Nuevo pedido'
+        }}</ion-card-title></ion-card-header>
     <ion-card-content>
       <ion-input v-model="cliente" label="Cliente" label-placement="stacked" :maxlength="160" :disabled="creando" />
-      <ion-select v-if="!empresa" :model-value="empresa_id" label="Empresa del pedido" label-placement="stacked" :disabled="creando || cargando_empresas" @ionChange="cambiar_empresa($event.detail.value, $event)">
-        <ion-select-option v-for="opcion in empresas" :key="opcion.id" :value="opcion.id">{{ opcion.nombre_empresa }}</ion-select-option>
+      <ion-select v-if="!empresa" :model-value="empresa_id" label="Empresa del pedido" label-placement="stacked"
+        :disabled="creando || cargando_empresas" @ionChange="cambiar_empresa($event.detail.value, $event)">
+        <ion-select-option v-for="opcion in empresas" :key="opcion.id" :value="opcion.id">{{ opcion.nombre_empresa
+          }}</ion-select-option>
       </ion-select>
       <p v-if="cargando_empresas">Cargando empresas...</p>
-      <ion-text v-if="error_empresas" color="danger"><p role="alert">{{ error_empresas }}</p></ion-text>
+      <ion-text v-if="error_empresas" color="danger">
+        <p role="alert">{{ error_empresas }}</p>
+      </ion-text>
       <ion-button v-if="error_empresas" fill="outline" @click="cargar_empresas">Reintentar empresas</ion-button>
       <p>Selecciona productos disponibles del catalogo.</p>
       <p v-if="cargando_productos">Cargando productos...</p>
-      <ion-text v-if="error_productos" color="danger"><p role="alert">{{ error_productos }}</p></ion-text>
-      <ion-button v-if="error_productos" fill="outline" :disabled="creando" @click="cargar_productos(pagina)">Reintentar catalogo</ion-button>
+      <ion-text v-if="error_productos" color="danger">
+        <p role="alert">{{ error_productos }}</p>
+      </ion-text>
+      <ion-button v-if="error_productos" fill="outline" :disabled="creando" @click="cargar_productos(pagina)">Reintentar
+        catalogo</ion-button>
       <ion-list>
         <ion-item v-for="producto in productos" :key="producto.id">
-          <comp-producto-foto v-if="producto.fotoUrl" slot="start" class="foto" :foto-url="producto.fotoUrl" :alt="producto.nombre" />
-          <ion-label class="ion-text-wrap">{{ producto.nombre }}<p v-if="producto.descripcion">{{ producto.descripcion }}</p><p>{{ dinero(producto.precio) }} · {{ producto.stock ? 'Disponible' : 'Sin stock' }}</p></ion-label>
-          <ion-button slot="end" fill="outline" :disabled="creando || !producto.stock || renglones.length >= 100 || renglones.some(r => r.producto.id === producto.id)" @click="agregar(producto)">Agregar</ion-button>
+          <comp-producto-foto v-if="producto.fotoUrl" slot="start" class="foto" :foto-url="producto.fotoUrl"
+            :alt="producto.nombre" />
+          <ion-label class="ion-text-wrap">{{ producto.nombre }}<p v-if="producto.descripcion">{{ producto.descripcion
+              }}</p>
+            <p>{{ dinero(producto.precio) }} · {{ producto.stock ? 'Disponible' : 'Sin stock' }}</p>
+          </ion-label>
+          <ion-button slot="end" fill="outline"
+            :disabled="creando || !producto.stock || renglones.length >= 100 || renglones.some(r => r.producto.id === producto.id)"
+            @click="agregar(producto)">Agregar</ion-button>
         </ion-item>
       </ion-list>
       <p v-if="!cargando_productos && !error_productos && !productos.length">No hay productos.</p>
       <div class="acciones">
-        <ion-button fill="clear" :disabled="cargando_productos || pagina <= 1 || creando" @click="cargar_productos(pagina - 1)">Anterior</ion-button>
+        <ion-button fill="clear" :disabled="cargando_productos || pagina <= 1 || creando"
+          @click="cargar_productos(pagina - 1)">Anterior</ion-button>
         <span>Pagina {{ pagina }} de {{ Math.max(1, total_paginas) }}</span>
-        <ion-button fill="clear" :disabled="cargando_productos || pagina >= total_paginas || creando" @click="cargar_productos(pagina + 1)">Siguiente</ion-button>
+        <ion-button fill="clear" :disabled="cargando_productos || pagina >= total_paginas || creando"
+          @click="cargar_productos(pagina + 1)">Siguiente</ion-button>
       </div>
       <h2>Carrito</h2>
       <p v-if="!renglones.length">Agrega productos para preparar tu pedido.</p>
       <div v-for="renglon in renglones" :key="renglon.producto.id" class="renglon">
-        <div><strong>{{ renglon.producto.nombre }}</strong><p>{{ dinero(renglon.producto.precio) }} por unidad</p></div>
-        <ion-input v-model.number="renglon.cantidad" type="number" label="Cantidad" label-placement="stacked" min="1" max="10000" step="1" :disabled="creando" />
+        <div><strong>{{ renglon.producto.nombre }}</strong>
+          <p>{{ dinero(renglon.producto.precio) }} por unidad</p>
+        </div>
+        <ion-input v-model.number="renglon.cantidad" type="number" label="Cantidad" label-placement="stacked" min="1"
+          max="10000" step="1" :disabled="creando" />
         <span>{{ dinero(renglon.producto.precio * Number(renglon.cantidad)) }}</span>
-        <ion-button fill="clear" color="danger" :disabled="creando" @click="renglones = renglones.filter(r => r !== renglon)">Quitar</ion-button>
+        <ion-button fill="clear" color="danger" :disabled="creando"
+          @click="renglones = renglones.filter(r => r !== renglon)">Quitar</ion-button>
       </div>
       <p><strong>Total orientativo: {{ dinero(total_orientativo) }}</strong></p>
       <p>El servidor confirma los precios y la disponibilidad al crear el pedido.</p>
-      <ion-text v-if="error_crear" color="danger"><p role="alert">{{ error_crear }}</p></ion-text>
-      <ion-button expand="block" :disabled="creando || !renglones.length || !empresa_id" @click="crear">{{ creando ? 'Creando...' : 'Confirmar pedido' }}</ion-button>
+      <ion-text v-if="error_crear" color="danger">
+        <p role="alert">{{ error_crear }}</p>
+      </ion-text>
+      <ion-button expand="block" :disabled="creando || !renglones.length || !empresa_id" @click="crear">{{ creando ?
+        'Creando...' : 'Confirmar pedido' }}</ion-button>
     </ion-card-content>
   </ion-card>
 </template>
@@ -51,6 +74,9 @@ import { sesion } from '../services/auth_service';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 import { obtener_productos, type Producto } from '../services/productos_service';
 import { crear_pedido } from '../services/pedidos_service';
+import { codigo_pedido } from '../services/pedidos_service';
+import { notificar_local } from '../services/notificaciones_nativas_service';
+import { avisar } from '../services/aviso_service'
 
 const props = defineProps<{ empresa?: Empresa }>();
 const emit = defineEmits<{ creado: [id: number] }>();
@@ -132,6 +158,11 @@ async function crear() {
   creando.value = true;
   try {
     const nuevo = await crear_pedido({ cliente: nombre, empresa_id: empresa_id.value, items: renglones.value.map(r => ({ productoId: r.producto.id, cantidad: Number(r.cantidad) })) });
+    console.log('[pedido] creado', nuevo);
+    const codigo = codigo_pedido(nuevo.id);
+    // No bloquean la navegacion: si el toast o la notificacion fallan, el pedido ya esta creado.
+    void avisar(`Pedido ${codigo} confirmado`);
+    void notificar_local('Pedido confirmado', `${codigo} fue creado correctamente.`);
     if (!activo) return;
     cliente.value = ''; renglones.value = []; creando.value = false;
     emit('creado', nuevo.id);
@@ -151,9 +182,36 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.acciones { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.foto { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
-.renglon { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ion-color-light-shade); }
-.renglon p { margin: 4px 0; }
-@media (max-width: 600px) { .renglon { grid-template-columns: minmax(0, 1fr) 100px; } }
+.acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.foto {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.renglon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ion-color-light-shade);
+}
+
+.renglon p {
+  margin: 4px 0;
+}
+
+@media (max-width: 600px) {
+  .renglon {
+    grid-template-columns: minmax(0, 1fr) 100px;
+  }
+}
 </style>

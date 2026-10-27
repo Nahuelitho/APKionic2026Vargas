@@ -127,7 +127,21 @@ describe('Multiempresa', () => {
     expect(wrapper.text()).toContain('Vargas');
     expect(wrapper.text()).not.toContain('Cerrada');
     expect(wrapper.text()).not.toContain('Guardar');
-    expect(wrapper.findComponent('ion-item-stub').props('routerLink')).toBe('/app/catalogo/1');
+    const boton_catalogo = wrapper.findAllComponents('ion-button-stub').find(x => x.props('routerLink') === '/app/catalogo/1');
+    expect(boton_catalogo).toBeDefined();
+    wrapper.unmount();
+  });
+
+  test('elegir empresa solo habilita el mapa cuando la empresa tiene coordenadas', async () => {
+    vi.mocked(obtener_empresas).mockResolvedValue([
+      { id: 1, nombre_empresa: 'Vargas', activo: true, latitud: -31.4, longitud: -64.1 },
+      { id: 2, nombre_empresa: 'Sin punto', activo: true, latitud: null, longitud: null },
+    ]);
+    const wrapper = mount(ComprarPage, { global }); await flushPromises();
+    const botones_mapa = wrapper.findAllComponents('ion-button-stub').filter(x => x.attributes('data-test') === 'mapa');
+    expect(botones_mapa).toHaveLength(2);
+    expect(botones_mapa[0].props('disabled')).toBe(false);
+    expect(botones_mapa[1].props('disabled')).toBe(true);
     wrapper.unmount();
   });
 
@@ -173,8 +187,9 @@ describe('Multiempresa', () => {
     wrapper.unmount();
   });
 
-  test('superadmin puede acceder a empresas y usuarios; comun no tiene esas rutas', () => {
-    expect(navegacion.find(x => x.id === 'empresas')?.roles).toEqual(['superadmin']);
+  test('admin y superadmin administran empresas; el vendedor solo ve Mi Empresa', () => {
+    expect(navegacion.find(x => x.id === 'empresas')?.roles).toEqual(['superadmin', 'administrador']);
+    expect(navegacion.find(x => x.id === 'mi-empresa')?.roles).toEqual(['vendedor']);
     expect(navegacion.find(x => x.id === 'usuarios')?.roles).toEqual(['superadmin', 'administrador']);
     expect(navegacion.find(x => x.id === 'pedidos')?.roles).toBeUndefined();
   });

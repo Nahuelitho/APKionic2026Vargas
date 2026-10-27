@@ -7,6 +7,13 @@
         </ion-buttons>
 
         <ion-title>{{ titulo }}</ion-title>
+
+        <ion-buttons slot="end">
+          <ion-button class="campana" router-link="/app/notificaciones" :aria-label="etiqueta_campana">
+            <ion-icon slot="icon-only" :icon="notificationsOutline" />
+            <ion-badge v-if="no_leidas > 0" color="danger" class="campana-badge">{{ no_leidas > 99 ? '99+' : no_leidas }}</ion-badge>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -27,10 +34,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import {
+  IonBadge,
+  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
+  IonIcon,
   IonMenuButton,
   IonPage,
   IonRefresher,
@@ -38,6 +49,13 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue';
+import { notificationsOutline } from 'ionicons/icons';
+import { use_notificaciones_store } from '../../stores/notificaciones_store';
+
+const { no_leidas } = use_notificaciones_store();
+const etiqueta_campana = computed(() => no_leidas.value > 0
+  ? `Notificaciones, ${no_leidas.value} sin leer`
+  : 'Notificaciones');
 
 defineProps({
   titulo: {
@@ -60,5 +78,21 @@ function actualizar(event: CustomEvent) {
 <style scoped>
 .contenido {
   padding: 16px;
+}
+
+.campana {
+  position: relative;
+}
+
+.campana-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 16px;
 }
 </style>

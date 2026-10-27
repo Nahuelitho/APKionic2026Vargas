@@ -34,3 +34,27 @@ npm-debug.log*
 # .NET build output
 bin/
 obj/
+
+# Documentacion interna / SDD
+docs/SDD_Multitenant_Vargas.md
+SDD*.md
+*SDD*.md
+
+# Android signing
+android/keystore.properties
+*.jks
+*.keystore
+keystore/
+android/app/release/
+
+# Firebase / Google services
+google-services*.json
+**/google-services.json
+**/firebase-adminsdk-*.json
+**/ServiceAccountKey.json
+
+# Env files
+.env
+.env.local
+.env.*.local
+.env.release

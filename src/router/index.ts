@@ -5,6 +5,8 @@ import MainLayout from '../layouts/main_layout.vue';
 import { navegacion, ruta_inicial, type ItemNavegacion } from '../config/navegacion';
 import LoginPage from '../views/LoginPage.vue';
 import CatalogoPage from '../views/CatalogoPage.vue';
+import EmpresaDetallePage from '../views/EmpresaDetallePage.vue';
+import NotificacionesPage from '../views/NotificacionesPage.vue';
 import { restaurar_sesion, sesion } from '../services/auth_service';
 
 const rutasApp = navegacion.map((item: ItemNavegacion) => ({
@@ -26,7 +28,9 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       { path: '', redirect: () => ruta_inicial(sesion.usuario.value?.rol) },
       ...rutasApp,
+      { path: 'empresas/:id', name: 'empresa-detalle', component: EmpresaDetallePage, meta: { roles: ['superadmin', 'administrador'] } },
       { path: 'catalogo/:empresaId', name: 'catalogo', component: CatalogoPage, meta: { roles: [''] } },
+      { path: 'notificaciones', name: 'notificaciones', component: NotificacionesPage },
     ],
   },
   {

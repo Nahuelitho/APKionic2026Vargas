@@ -1,4 +1,4 @@
-package io.ionic.starter;
+package com.vargas.multitiendas;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -11,6 +11,10 @@ public sealed class EmpresaConfiguration : IEntityTypeConfiguration<Empresa>
         builder.ToTable("empresas");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.NombreEmpresa).HasMaxLength(160).IsRequired();
+        builder.Property(x => x.DireccionLinea).HasMaxLength(250);
+        builder.Property(x => x.Referencia).HasMaxLength(250);
+        builder.Property(x => x.Latitud).HasPrecision(10, 7);
+        builder.Property(x => x.Longitud).HasPrecision(10, 7);
         builder.HasData(new Empresa { Id = 1, NombreEmpresa = "Vargas", Activo = true });
     }
 }

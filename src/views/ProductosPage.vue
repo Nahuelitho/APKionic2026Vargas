@@ -1,200 +1,6 @@
-<template>
-  <comp-page titulo="Productos" :mostrar_actualizar="true" @actualizar="actualizar">
-    <ion-card v-if="puede_gestionar_productos">
-      <ion-card-header>
-        <ion-card-title>
-          {{ producto_editando_id ? 'Modificar producto' : 'Nuevo producto' }}
-        </ion-card-title>
-      </ion-card-header>
-
-      <ion-card-content>
-        <ion-input
-          v-model="formulario.nombre"
-          label="Nombre"
-          label-placement="stacked"
-          placeholder="Ej: Yerba mate"
-        />
-
-        <ion-textarea
-          v-model="formulario.descripcion"
-          label="Descripcion"
-          label-placement="stacked"
-          placeholder="Detalle del producto"
-        />
-
-        <ion-input
-          v-model.number="formulario.precio"
-          type="number"
-          label="Precio"
-          label-placement="stacked"
-          placeholder="0"
-        />
-
-        <ion-item lines="none">
-          <ion-toggle
-            :key="`${producto_editando_id || 'nuevo'}-${formulario.stock}`"
-            :checked="formulario.stock"
-            @ionChange="cambiar_stock"
-          >
-            {{ formulario.stock ? 'Con stock' : 'Sin stock' }}
-          </ion-toggle>
-        </ion-item>
-
-        <p>
-          Estado cargado desde API: {{ formulario.stock ? 'Con stock' : 'Sin stock' }}
-        </p>
-
-        <div class="foto-formulario">
-          <p>Foto del producto (JPEG, PNG o WebP, hasta 5 MB)</p>
-          <img
-            v-if="foto_preview"
-            :src="foto_preview"
-            alt="Vista previa de la foto del producto"
-            class="foto-preview"
-          />
-          <comp-producto-foto v-else-if="foto_actual_url" :foto-url="foto_actual_url" alt="Foto actual del producto" class="foto-preview" />
-          <div class="foto-acciones">
-            <template v-if="es_nativo">
-              <ion-button fill="outline" :disabled="guardando || seleccionando_foto || cargando_edicion" @click="seleccionar_foto('camara')">
-                Camara
-              </ion-button>
-              <ion-button fill="outline" :disabled="guardando || seleccionando_foto || cargando_edicion" @click="seleccionar_foto('galeria')">
-                Galeria
-              </ion-button>
-            </template>
-            <ion-button v-else fill="outline" :disabled="guardando || cargando_edicion" @click="selector_foto?.click()">
-              Seleccionar foto
-            </ion-button>
-            <ion-button v-if="foto_archivo" fill="clear" color="medium" :disabled="guardando" @click="descartar_foto">
-              Descartar foto nueva
-            </ion-button>
-          </div>
-          <input
-            ref="selector_foto"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            hidden
-            @change="seleccionar_archivo"
-          />
-          <p v-if="seleccionando_foto">Obteniendo foto...</p>
-          <ion-text v-if="error_foto" color="danger"><p>{{ error_foto }}</p></ion-text>
-        </div>
-
-        <ion-text v-if="error_formulario" color="danger">
-          <p>{{ error_formulario }}</p>
-        </ion-text>
-
-        <ion-button
-          expand="block"
-          :disabled="guardando || seleccionando_foto || cargando_edicion"
-          @click="guardar"
-        >
-          {{ guardando ? 'Guardando...' : producto_editando_id ? 'Guardar cambios' : 'Crear producto' }}
-        </ion-button>
-
-        <ion-button
-          v-if="producto_editando_id || foto_archivo || cargando_edicion"
-          expand="block"
-          fill="clear"
-          color="medium"
-          :disabled="guardando"
-          @click="cancelar_edicion"
-        >
-          {{ producto_editando_id || cargando_edicion ? 'Cancelar edicion' : 'Limpiar formulario' }}
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-    <comp-esqueleto v-if="cargando && !hay_productos" />
-
-    <ion-card v-else-if="error">
-      <ion-card-header>
-        <ion-card-title>No se pudieron cargar los productos</ion-card-title>
-      </ion-card-header>
-
-      <ion-card-content>
-        <p>{{ error }}</p>
-
-        <ion-button expand="block" @click="cargar">
-          Reintentar
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-    <ion-card v-else-if="!hay_productos && !empresas.length">
-      <ion-card-content>
-        No hay productos cargados.
-      </ion-card-content>
-    </ion-card>
-
-    <ion-list v-else>
-      <template v-for="grupo in grupos" :key="grupo.id">
-      <ion-item-divider><ion-label>{{ grupo.nombre }}</ion-label></ion-item-divider>
-      <ion-item v-if="!grupo.productos.length"><ion-label>Sin productos en esta pagina.</ion-label></ion-item>
-      <ion-item v-for="producto in grupo.productos" :key="producto.id">
-        <ion-thumbnail v-if="producto.fotoUrl" slot="start">
-          <comp-producto-foto :foto-url="producto.fotoUrl" :alt="`Foto de ${producto.nombre}`" />
-        </ion-thumbnail>
-        <ion-label>
-          <h3>{{ producto.nombre }}</h3>
-          <p>{{ producto.descripcion || 'Sin descripcion' }}</p>
-          <p>${{ producto.precio }}</p>
-        </ion-label>
-
-        <ion-badge v-if="!producto.stock" color="warning">
-          Sin stock
-        </ion-badge>
-
-        <ion-button
-          fill="clear"
-          size="small"
-           v-if="puede_gestionar_productos"
-          :disabled="guardando || seleccionando_foto || cargando_edicion"
-          @click="editar(producto)"
-        >
-          Editar
-        </ion-button>
-
-        <ion-button
-          fill="clear"
-          size="small"
-          color="danger"
-          :disabled="eliminando"
-           v-if="puede_gestionar_productos"
-          @click="borrar(producto.id)"
-        >
-          Borrar
-        </ion-button>
-      </ion-item>
-      </template>
-    </ion-list>
-
-     <ion-card>
-      <ion-card-content>
-        <ion-select v-if="sesion.usuario.value?.rol === 'superadmin'" v-model="empresa_id" label="Empresa" label-placement="stacked" :disabled="!!producto_editando_id">
-          <ion-select-option v-for="empresa in empresas.filter(e => e.activo)" :key="empresa.id" :value="empresa.id">{{ empresa.nombre_empresa }}</ion-select-option>
-        </ion-select>
-        <p>
-          Mostrando {{ productos.length }} de {{ total }} productos
-        </p>
-
-        <ion-button
-          v-if="hay_mas_productos"
-          expand="block"
-          fill="outline"
-          :disabled="cargando"
-          @click="cargar_mas_productos"
-        >
-          {{ cargando ? 'Cargando...' : 'Ver mas' }}
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-  </comp-page>
-</template>
-
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { computed } from 'vue';
+import { onBeforeUnmount, reactive, ref, watch, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 
 import {
@@ -203,6 +9,7 @@ import {
   IonCard,
   IonCardContent,
   IonCardHeader,
+  IonCardSubtitle,
   IonCardTitle,
   IonInput,
   IonItem,
@@ -228,6 +35,8 @@ import { obtener_foto, validar_foto } from '../services/camara_service';
 import { sesion } from '../services/auth_service';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 
+const route = useRoute();
+
 const {
   productos,
   cargando,
@@ -236,7 +45,6 @@ const {
   error,
   error_formulario,
   total,
-  hay_productos,
   hay_mas_productos,
   cargar_productos,
   cargar_mas_productos,
@@ -246,11 +54,48 @@ const {
 } = use_productos_store();
 
 const puede_gestionar_productos = computed(() => ['superadmin', 'administrador', 'vendedor'].includes(sesion.usuario.value?.rol || ''));
-const empresas = ref<Empresa[]>([]), empresa_id = ref<number | null>(null);
-const grupos = computed(() => Array.from(new Set([...empresas.value.map(e => e.id), ...productos.value.map(p => p.empresa_id)])).map(id => ({
-  id, nombre: empresas.value.find(e => e.id === id)?.nombre_empresa ?? productos.value.find(p => p.empresa_id === id)!.nombre_empresa,
-  productos: productos.value.filter(p => p.empresa_id === id),
-})));
+const es_superadmin = computed(() => sesion.usuario.value?.rol === 'superadmin');
+
+const empresas = ref<Empresa[]>([]);
+const empresa_id = ref<number | null>(null);
+const filtro_empresa_id = ref<number | null>(null);
+
+const empresas_activas = computed(() => empresas.value.filter(e => e.activo));
+
+const productos_filtrados = computed(() => {
+  if (es_superadmin.value && filtro_empresa_id.value != null) {
+    return productos.value.filter(p => p.empresa_id === filtro_empresa_id.value);
+  }
+  if (!es_superadmin.value && empresa_id.value != null) {
+    return productos.value.filter(p => p.empresa_id === empresa_id.value);
+  }
+  return productos.value;
+});
+
+const hay_productos_filtrados = computed(() => productos_filtrados.value.length > 0);
+
+const grupos = computed(() => {
+  const lista = productos_filtrados.value;
+  if (!lista.length) return [];
+
+  const mapa = new Map<number, Producto[]>();
+  for (const producto of lista) {
+    if (!mapa.has(producto.empresa_id)) mapa.set(producto.empresa_id, []);
+    mapa.get(producto.empresa_id)!.push(producto);
+  }
+
+  return Array.from(mapa.entries())
+    .map(([id, productosGrupo]) => {
+      const empresa = empresas.value.find(e => e.id === id);
+      const nombre = empresa?.nombre_empresa ?? productosGrupo[0]?.nombre_empresa ?? 'Sin empresa';
+      return {
+        id,
+        nombre,
+        productos: productosGrupo,
+      };
+    })
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
 
 const producto_editando_id = ref<number | null>(null);
 const es_nativo = Capacitor.isNativePlatform();
@@ -328,6 +173,10 @@ async function cargar() {
 
 async function guardar() {
   if (!puede_gestionar_productos.value || guardando.value || seleccionando_foto.value || cargando_edicion.value) return;
+  if (es_superadmin.value && !producto_editando_id.value && empresa_id.value == null) {
+    error_formulario.value = 'Seleccioná la empresa para la que querés crear el producto.';
+    return;
+  }
   if (foto_archivo.value) {
     error_foto.value = validar_foto(foto_archivo.value);
     if (error_foto.value) return;
@@ -408,38 +257,38 @@ async function actualizar(event: CustomEvent) {
 
 onIonViewWillEnter(async () => {
   await cargar();
-  try { empresas.value = await obtener_empresas(); empresa_id.value = empresas.value.find(e => e.activo)?.id ?? null; }
-  catch { error_formulario.value = 'No se pudieron cargar las empresas.'; }
+  try {
+    empresas.value = await obtener_empresas();
+    const empresaQuery = route.query.empresaId ? Number(route.query.empresaId) : null;
+    const empresaQueryValida = empresaQuery && !Number.isNaN(empresaQuery);
+
+    if (es_superadmin.value) {
+      filtro_empresa_id.value = empresaQueryValida ? empresaQuery : null;
+      empresa_id.value = empresaQueryValida ? empresaQuery : null;
+    } else {
+      const empresaSesion = sesion.usuario.value?.empresa_id ?? null;
+      const empresaElegida = empresaQueryValida ? empresaQuery : empresaSesion;
+      empresa_id.value = empresaElegida;
+      filtro_empresa_id.value = null;
+    }
+  }
+  catch {
+    error_formulario.value = 'No se pudieron cargar las empresas.';
+  }
 });
 
 watch(puede_gestionar_productos, (puede_gestionar) => {
   if (!puede_gestionar) limpiar_formulario();
 });
 
+watch(es_superadmin, () => {
+  if (!es_superadmin.value) {
+    filtro_empresa_id.value = null;
+    empresa_id.value = sesion.usuario.value?.empresa_id ?? null;
+  }
+});
+
 // Ionic puede conservar la vista montada al navegar.
 onIonViewDidLeave(limpiar_formulario);
 onBeforeUnmount(limpiar_formulario);
 </script>
-
-<style scoped>
-.foto-preview {
-  display: block;
-  width: 100%;
-  max-width: 320px;
-  max-height: 240px;
-  object-fit: contain;
-  border-radius: 8px;
-}
-
-.foto-acciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 8px 0;
-}
-
-ion-thumbnail img {
-  object-fit: cover;
-  border-radius: 6px;
-}
-</style>

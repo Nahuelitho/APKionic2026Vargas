@@ -35,11 +35,31 @@ namespace multitenant_vargas.Api.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("activo");
 
+                    b.Property<string>("DireccionLinea")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)")
+                        .HasColumnName("direccion_linea");
+
+                    b.Property<decimal?>("Latitud")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("decimal(10,7)")
+                        .HasColumnName("latitud");
+
+                    b.Property<decimal?>("Longitud")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("decimal(10,7)")
+                        .HasColumnName("longitud");
+
                     b.Property<string>("NombreEmpresa")
                         .IsRequired()
                         .HasMaxLength(160)
                         .HasColumnType("varchar(160)")
                         .HasColumnName("nombre_empresa");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)")
+                        .HasColumnName("referencia");
 
                     b.HasKey("Id")
                         .HasName("pk_empresas");
@@ -53,6 +73,62 @@ namespace multitenant_vargas.Api.Migrations
                             Activo = true,
                             NombreEmpresa = "Vargas"
                         });
+                });
+
+            modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Notificacion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("EmpresaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("fecha");
+
+                    b.Property<bool>("Leida")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("leida");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("mensaje");
+
+                    b.Property<long?>("PedidoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("titulo");
+
+                    b.Property<long>("UsuarioId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notificaciones");
+
+                    b.HasIndex("EmpresaId")
+                        .HasDatabaseName("ix_notificaciones_empresa_id");
+
+                    b.HasIndex("Fecha")
+                        .HasDatabaseName("ix_notificaciones_fecha");
+
+                    b.HasIndex("UsuarioId", "Leida")
+                        .HasDatabaseName("ix_notificaciones_usuario_id_leida");
+
+                    b.ToTable("notificaciones", (string)null);
                 });
 
             modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Pedido", b =>
@@ -455,6 +531,27 @@ namespace multitenant_vargas.Api.Migrations
                         {
                             t.HasCheckConstraint("ck_usuario_roles_ambito", "(rol_id = 4 AND empresa_id IS NULL) OR (rol_id IN (1, 2, 3) AND empresa_id IS NOT NULL)");
                         });
+                });
+
+            modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Notificacion", b =>
+                {
+                    b.HasOne("multitenant_vargas.Api.Domain.Entities.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_notificaciones_empresas_empresa_id");
+
+                    b.HasOne("multitenant_vargas.Api.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notificaciones_usuarios_usuario_id");
+
+                    b.Navigation("Empresa");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Pedido", b =>

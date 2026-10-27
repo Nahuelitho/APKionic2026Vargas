@@ -5,6 +5,10 @@ public sealed class Empresa
     public long Id { get; set; }
     public string NombreEmpresa { get; set; } = string.Empty;
     public bool Activo { get; set; } = true;
+    public string? DireccionLinea { get; set; }
+    public string? Referencia { get; set; }
+    public decimal? Latitud { get; set; }
+    public decimal? Longitud { get; set; }
 }
 
 public sealed class UsuarioRol
