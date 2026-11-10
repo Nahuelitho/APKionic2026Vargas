@@ -31,12 +31,14 @@ export type ItemNavegacion = {
   componente: Component;
   roles?: string[];
   tab_roles?: string[];
+  // La pantalla tiene sus lecturas guardables y se puede usar sin conexion.
+  sin_red?: boolean;
 };
 
 export const navegacion: ItemNavegacion[] = [
   {
     id: 'comprar', titulo: 'Tiendas', ruta: '/app/comprar', icono: storefrontOutline,
-    orden: 15, grupo: 'principal', tab: true, componente: ComprarPage, roles: [''],
+    orden: 15, grupo: 'principal', tab: true, componente: ComprarPage, roles: [''], sin_red: true,
   },
   {
     id: 'empresas',
@@ -71,6 +73,7 @@ export const navegacion: ItemNavegacion[] = [
     tab: true,
     componente: InicioPage,
     roles: ['superadmin', 'administrador', 'vendedor', 'caja'],
+    sin_red: true,
   },
   {
     id: 'productos',
@@ -82,6 +85,7 @@ export const navegacion: ItemNavegacion[] = [
     tab: true,
     componente: ProductosPage,
     roles: ['superadmin', 'administrador', 'vendedor'],
+    sin_red: true,
   },
   {
     id: 'clientes',
@@ -94,6 +98,7 @@ export const navegacion: ItemNavegacion[] = [
     componente: ClientesPage,
     roles: ['superadmin', 'administrador', 'vendedor'],
     tab_roles: ['superadmin', 'administrador', 'vendedor'],
+    sin_red: true,
   },
   {
     id: 'pedidos',
@@ -105,6 +110,7 @@ export const navegacion: ItemNavegacion[] = [
     tab: true,
     componente: PedidosPage,
     tab_roles: ['superadmin', 'administrador', 'vendedor', 'caja', ''],
+    sin_red: true,
   },
   {
     id: 'usuarios',
@@ -127,6 +133,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'configuracion',
     tab: true,
     componente: MiCuentaPage,
+    sin_red: true,
   },
 ];
 
@@ -139,7 +146,13 @@ export function ruta_inicial(rol: string | null | undefined): string {
   return '/app/inicio';
 }
 
-export function puede_ver_item(item: ItemNavegacion, rol: string | null | undefined): boolean {
+export function puede_ver_item(
+  item: ItemNavegacion,
+  rol: string | null | undefined,
+  sin_conexion = false,
+): boolean {
+  // Sin red primero se descartan las pantallas que no tienen datos guardados.
+  if (sin_conexion && !item.sin_red) return false;
   return !item.roles || item.roles.includes(rol || '');
 }
 

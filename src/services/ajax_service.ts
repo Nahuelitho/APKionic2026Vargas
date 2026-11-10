@@ -1,8 +1,7 @@
 import { obtener_api_url } from '../config/debug';
 import { limpiar_sesion, obtener_access_token, renovar_sesion } from './auth_service';
+import { guardar_copia, obtener_copia } from './copia_local_service';
 import { vibrar_error } from './vibracion_service';
-
-const api_url = obtener_api_url();
 
 type AjaxError = {
   estado_http: number;
@@ -12,6 +11,9 @@ type AjaxError = {
 };
 
 function construir_url(endpoint: string) {
+  // Se resuelve en cada peticion: el unico lugar que decide la URL es debug.ts.
+  const api_url = obtener_api_url();
+
   if (!api_url) {
     throw new Error('No se configuro la URL de la API.');
   }
@@ -59,6 +61,8 @@ type AjaxRequestOptions = {
   body?: unknown;
   binario?: boolean;
   silencioso?: boolean;
+  // Marca una lectura: con red guarda copia y sin red la entrega.
+  guardable?: boolean;
 };
 
 export async function ajax_request<T>(
@@ -90,8 +94,17 @@ export async function ajax_request<T>(
         respuesta: respuesta_json,
       };
     }
+    // Con red la lectura se guarda por endpoint para poder leerla sin conexion.
+    if (options.guardable && !options.binario) guardar_copia(endpoint, respuesta_json);
     return respuesta_json as T;
   } catch (error) {
+    // Sin red (status 0) y con copia, se entrega la ultima lectura guardada.
+    const es_error_de_red = error instanceof TypeError
+      || (typeof error === 'object' && error !== null && 'estado_http' in error && (error as AjaxError).estado_http === 0);
+    if (options.guardable && !options.binario && es_error_de_red) {
+      const copia = obtener_copia<T>(endpoint);
+      if (copia !== null) return copia;
+    }
     throw normalizar_error(error, options.silencioso);
   }
 }

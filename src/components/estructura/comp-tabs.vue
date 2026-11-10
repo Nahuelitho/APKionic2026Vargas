@@ -23,9 +23,11 @@ import {
 import { navegacion_ordenada, puede_ver_item, titulo_item } from '../../config/navegacion';
 import { computed } from 'vue';
 import { sesion } from '../../services/auth_service';
+import { use_offline_store } from '../../stores/offline_store';
 
+const offline_store = use_offline_store();
 const tabs = computed(() => navegacion_ordenada.filter((item) => {
-  if (!item.tab || !puede_ver_item(item, sesion.usuario.value?.rol)) return false;
+  if (!item.tab || !puede_ver_item(item, sesion.usuario.value?.rol, offline_store.sin_conexion.value)) return false;
   const roles = item.tab_roles ?? item.roles;
   return !roles || roles.includes(sesion.usuario.value?.rol || '');
 }));

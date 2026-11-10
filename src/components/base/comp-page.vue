@@ -9,7 +9,7 @@
         <ion-title>{{ titulo }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button class="campana" router-link="/app/notificaciones" :aria-label="etiqueta_campana">
+          <ion-button v-if="!offline_store.sin_conexion.value" class="campana" router-link="/app/notificaciones" :aria-label="etiqueta_campana">
             <ion-icon slot="icon-only" :icon="notificationsOutline" />
             <ion-badge v-if="no_leidas > 0" color="danger" class="campana-badge">{{ no_leidas > 99 ? '99+' : no_leidas }}</ion-badge>
           </ion-button>
@@ -51,8 +51,10 @@ import {
 } from '@ionic/vue';
 import { notificationsOutline } from 'ionicons/icons';
 import { use_notificaciones_store } from '../../stores/notificaciones_store';
+import { use_offline_store } from '../../stores/offline_store';
 
 const { no_leidas } = use_notificaciones_store();
+const offline_store = use_offline_store();
 const etiqueta_campana = computed(() => no_leidas.value > 0
   ? `Notificaciones, ${no_leidas.value} sin leer`
   : 'Notificaciones');

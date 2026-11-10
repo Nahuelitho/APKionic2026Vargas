@@ -68,6 +68,9 @@ import {
 import { navegacion_ordenada, puede_ver_item, titulo_item } from '../../config/navegacion';
 import { computed } from 'vue';
 import { sesion } from '../../services/auth_service';
+import { use_offline_store } from '../../stores/offline_store';
+
+const offline_store = use_offline_store();
 
 defineProps({
   content_id: {
@@ -76,7 +79,7 @@ defineProps({
   },
 });
 
-const permitidos = computed(() => navegacion_ordenada.filter((item) => puede_ver_item(item, sesion.usuario.value?.rol)));
+const permitidos = computed(() => navegacion_ordenada.filter((item) => puede_ver_item(item, sesion.usuario.value?.rol, offline_store.sin_conexion.value)));
 const principales = computed(() => permitidos.value.filter((item) => item.grupo === 'principal'));
 const configuracion = computed(() => permitidos.value.filter((item) => item.grupo === 'configuracion'));
 </script>

@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router';
+import { use_offline_store } from './stores/offline_store';
 
 import { IonicVue } from '@ionic/vue';
 
@@ -40,4 +41,6 @@ const app = createApp(App)
 
 router.isReady().then(() => {
   app.mount('#app');
+  // Escucha la red desde el arranque y manda lo que quedo en la cola.
+  void use_offline_store().iniciar();
 });

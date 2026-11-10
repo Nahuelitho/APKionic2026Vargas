@@ -3,6 +3,8 @@ import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Capacitor } from '@capacitor/core';
 import { obtener_api_url } from '../config/debug';
+import { borrar_copias, guardar_copia, obtener_copia } from './copia_local_service';
+import { borrar_cola } from './offline_queue_service';
 
 export type UsuarioSesion = { id: number; nombre: string; email: string; rol: string | null; empresa_id: number | null };
 type SesionResponse = { access_token: string; refresh_token: string; expira_utc: string; usuario: UsuarioSesion };
@@ -22,6 +24,8 @@ async function guardar_sesion(sesion: SesionResponse) {
     SecureStorage.set(CLAVE_TOKEN, sesion.access_token),
     SecureStorage.set(CLAVE_REFRESH, sesion.refresh_token),
   ]);
+  // El login ya trae al usuario: queda como copia de "quien soy" para abrir sin red.
+  guardar_copia('/api/sesion/yo', sesion.usuario);
   await cargar_usuario();
 }
 
@@ -51,10 +55,20 @@ async function solicitar(endpoint: string, body: unknown): Promise<SesionRespons
 
 async function cargar_usuario(): Promise<boolean> {
   if (!access_token) return false;
-  const respuesta = await fetch(`${obtener_api_url()}/api/sesion/yo`, { headers: { Authorization: `Bearer ${access_token}` } });
-  if (!respuesta.ok) return false;
-  usuario.value = await respuesta.json() as UsuarioSesion;
-  return true;
+  try {
+    const respuesta = await fetch(`${obtener_api_url()}/api/sesion/yo`, { headers: { Authorization: `Bearer ${access_token}` } });
+    if (!respuesta.ok) return false;
+    usuario.value = await respuesta.json() as UsuarioSesion;
+    // La copia se actualiza con cada respuesta valida de la API.
+    guardar_copia('/api/sesion/yo', usuario.value);
+    return true;
+  } catch {
+    // Sin red: la app arranca con el usuario de la ultima vez.
+    const copia = obtener_copia<UsuarioSesion>('/api/sesion/yo');
+    if (!copia) return false;
+    usuario.value = copia;
+    return true;
+  }
 }
 
 export async function iniciar_sesion(email: string, password: string, empresa_id?: number) {
@@ -99,6 +113,9 @@ export async function limpiar_sesion() {
   access_token = null; usuario.value = null;
   await Promise.all([SecureStorage.remove(CLAVE_TOKEN), SecureStorage.remove(CLAVE_REFRESH)]);
   localStorage.removeItem(CLAVE_BIOMETRIA);
+  // Las copias y la cola son de quien las cargo: nada pasa al usuario siguiente.
+  borrar_copias();
+  borrar_cola();
 }
 
 export async function configurar_biometria(activar: boolean) {

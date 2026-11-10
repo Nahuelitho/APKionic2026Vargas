@@ -88,6 +88,7 @@ function crear_form_data(producto: ProductoRequest) {
 export async function obtener_productos(pagina = 1, tamanio = 10, empresa_id?: number | null) {
   const respuesta = await ajax_request<ProductosApiResponse>(
     `/api/productos?pagina=${pagina}&tamanio=${tamanio}${empresa_id ? `&empresa_id=${empresa_id}` : ''}`,
+    { guardable: true },
   );
 
   return {
@@ -97,7 +98,7 @@ export async function obtener_productos(pagina = 1, tamanio = 10, empresa_id?: n
 }
 
 export async function obtener_producto(id: number) {
-  const producto = await ajax_request<ProductoApi>(`/api/productos/${id}`);
+  const producto = await ajax_request<ProductoApi>(`/api/productos/${id}`, { guardable: true });
 
   return normalizar_producto(producto);
 }

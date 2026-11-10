@@ -6,6 +6,7 @@ import { crear_pedido } from '../../src/services/pedidos_service';
 import { ajax_binario, ajax_request } from '../../src/services/ajax_service';
 import PedidosPage from '../../src/views/PedidosPage.vue';
 import ProductosPage from '../../src/views/ProductosPage.vue';
+import ProductosEmpresaPage from '../../src/views/ProductosEmpresaPage.vue';
 import ComprarPage from '../../src/views/ComprarPage.vue';
 import CatalogoPage from '../../src/views/CatalogoPage.vue';
 import CompPedidoFormulario from '../../src/components/comp-pedido-formulario.vue';
@@ -60,7 +61,7 @@ beforeEach(() => {
 describe('Multiempresa', () => {
   test('el catalogo filtra por empresa y conserva el contrato multipart', async () => {
     await obtener_productos(2, 10, 7);
-    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=2&tamanio=10&empresa_id=7');
+    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=2&tamanio=10&empresa_id=7', { guardable: true });
     await crear_producto({ nombre: 'Producto', descripcion: null, precio: 10, stock: true, empresa_id: 7 });
     const datos = vi.mocked(ajax_request).mock.calls[1][1]?.body as FormData;
     expect(datos.get('empresaId')).toBe('7');
@@ -95,7 +96,7 @@ describe('Multiempresa', () => {
     expect(wrapper.text()).not.toContain('Borrar');
     await wrapper.findAll('ion-button-stub').find(x => x.text() === 'Siguiente')!.trigger('click');
     await flushPromises();
-    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=2&tamanio=10&empresa_id=2');
+    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=2&tamanio=10&empresa_id=2', { guardable: true });
     wrapper.unmount();
   });
 
@@ -109,12 +110,12 @@ describe('Multiempresa', () => {
     selector.vm.$emit('ionChange', { detail: { value: 2 } });
     await flushPromises();
     expect(wrapper.text()).toContain('por unidad');
-    expect(ajax_request).not.toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2');
+    expect(ajax_request).not.toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2', { guardable: true });
     confirmar.mockReturnValue(true);
     selector.vm.$emit('ionChange', { detail: { value: 2 } });
     await flushPromises();
     expect(wrapper.text()).not.toContain('por unidad');
-    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2');
+    expect(ajax_request).toHaveBeenCalledWith('/api/productos?pagina=1&tamanio=10&empresa_id=2', { guardable: true });
     wrapper.unmount();
     confirmar.mockRestore();
   });
@@ -175,13 +176,22 @@ describe('Multiempresa', () => {
     rutas.route.query = { pedido: '1' };
     const wrapper = mount(PedidosPage, { global }); await flushPromises();
     expect(wrapper.text()).toContain('Ver QR');
-    expect(ajax_request).toHaveBeenCalledWith('/api/pedidos/1');
+    expect(ajax_request).toHaveBeenCalledWith('/api/pedidos/1', { guardable: true });
     wrapper.unmount();
   });
 
-  test('personal conserva la gestion de productos', async () => {
-    sesion.usuario.value = { id: 1, nombre: 'Admin', email: 'admin@test.com', rol: 'administrador', empresa_id: 1 };
+  test('productos muestra el selector de empresas y navega a los productos de la empresa', async () => {
     const wrapper = mount(ProductosPage, { global }); await flushPromises();
+    expect(wrapper.text()).toContain('Elegí una empresa');
+    const fila = wrapper.findAll('ion-item-stub').find(x => x.text().includes('Vargas'))!;
+    await fila.trigger('click');
+    expect(rutas.push).toHaveBeenCalledWith('/app/empresas/1/productos');
+    wrapper.unmount();
+  });
+
+  test('personal conserva la gestion de productos en la vista de la empresa', async () => {
+    sesion.usuario.value = { id: 1, nombre: 'Admin', email: 'admin@test.com', rol: 'administrador', empresa_id: 2 };
+    const wrapper = mount(ProductosEmpresaPage, { global }); await flushPromises();
     expect(wrapper.text()).toContain('Nuevo producto');
     expect(wrapper.text()).toContain('Editar');
     wrapper.unmount();

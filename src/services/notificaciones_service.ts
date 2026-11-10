@@ -10,7 +10,7 @@ export type Notificacion = {
 };
 
 export function obtener_notificaciones() {
-  return ajax_request<{ notificaciones: Notificacion[] }>('/api/notificaciones');
+  return ajax_request<{ notificaciones: Notificacion[] }>('/api/notificaciones', { guardable: true });
 }
 
 export function obtener_no_leidas() {

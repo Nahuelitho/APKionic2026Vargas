@@ -11,6 +11,11 @@
     <template v-if="empresa">
       <h1>{{ empresa.nombre_empresa }}</h1>
       <p>Estos son los datos que ven tus clientes cuando eligen tu tienda.</p>
+
+      <ion-button :router-link="`/app/empresas/${empresa.id}/productos`" fill="outline">
+        Ver productos de mi empresa
+      </ion-button>
+
       <comp-empresa-editor :empresa="empresa" @guardado="cargar" />
     </template>
   </comp-page>

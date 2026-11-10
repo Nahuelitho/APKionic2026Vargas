@@ -1,6 +1,11 @@
 <template>
   <comp-page :titulo="sesion.usuario.value?.rol ? 'Pedidos' : 'Mis pedidos'" :mostrar_actualizar="true" @actualizar="actualizar">
-    <ion-card>
+    <ion-note v-if="offline.sin_conexion.value" color="warning">
+      Sin conexión: estás viendo los datos guardados. Podés cambiar el estado de un pedido;
+      se envía solo cuando vuelva la red.
+    </ion-note>
+
+    <ion-card v-if="!offline.sin_conexion.value">
       <ion-card-content>
         <div class="acciones">
           <ion-button v-if="es_nativo" :disabled="escaneando" @click="escanear">{{ escaneando ? 'Preparando escaner...' : 'Escanear QR' }}</ion-button>
@@ -12,7 +17,7 @@
     </ion-card>
 
     <ion-button v-if="sesion.usuario.value && !sesion.usuario.value.rol" router-link="/app/comprar">Elegir empresa</ion-button>
-    <comp-pedido-formulario v-if="activo && puede_crear" @creado="pedido_creado" />
+    <comp-pedido-formulario v-if="activo && puede_crear && !offline.sin_conexion.value" @creado="pedido_creado" />
 
     <ion-card v-if="detalle_id">
       <ion-card-header><ion-card-title>{{ codigo_pedido(detalle_id) }}</ion-card-title></ion-card-header>
@@ -25,6 +30,7 @@
           <h2>{{ detalle.cliente }}</h2>
           <p>{{ detalle.nombre_empresa }}</p>
           <p>{{ fecha(detalle.fecha) }}</p>
+          <ion-badge v-if="detalle.sin_enviar" color="warning">Sin enviar</ion-badge>
           <ion-badge :color="color_estado(detalle.estado)">{{ detalle.estado }}</ion-badge>
           <ion-list>
             <ion-item v-for="item in detalle.items" :key="item.id">
@@ -36,12 +42,12 @@
             <ion-button :disabled="cambiando" @click="cambiar_estado('Listo')">Marcar Listo</ion-button>
             <ion-button color="danger" fill="outline" :disabled="cambiando" @click="cambiar_estado('Cancelado')">Cancelar pedido</ion-button>
           </div>
-          <div class="acciones">
+          <div v-if="!offline.sin_conexion.value" class="acciones">
             <ion-button fill="outline" :disabled="cargando_qr" @click="mostrar_qr">{{ cargando_qr ? 'Cargando QR...' : 'Ver QR' }}</ion-button>
             <ion-button v-if="puede_pdf && detalle.estado === 'Listo'" :disabled="compartiendo" @click="compartir">{{ compartiendo ? 'Obteniendo PDF...' : es_nativo ? 'Compartir PDF' : 'Descargar PDF' }}</ion-button>
           </div>
-          <img v-if="qr_url" class="qr" :src="qr_url" :alt="`QR de ${codigo_pedido(detalle.id)}`" />
-          <ion-button v-if="qr_url || cargando_qr" fill="clear" @click="ocultar_qr">Ocultar QR</ion-button>
+          <img v-if="qr_url && !offline.sin_conexion.value" class="qr" :src="qr_url" :alt="`QR de ${codigo_pedido(detalle.id)}`" />
+          <ion-button v-if="(qr_url || cargando_qr) && !offline.sin_conexion.value" fill="clear" @click="ocultar_qr">Ocultar QR</ion-button>
           <ion-text v-if="error_archivo" color="danger"><p role="alert">{{ error_archivo }}</p></ion-text>
         </template>
       </ion-card-content>
@@ -54,6 +60,7 @@
     <ion-list v-else>
       <ion-item v-for="pedido in pedidos" :key="pedido.id" button :detail="true" @click="abrir_detalle(pedido.id)">
         <ion-label class="ion-text-wrap"><h3>{{ codigo_pedido(pedido.id) }} · {{ pedido.cliente }}</h3><p>{{ pedido.nombre_empresa }}</p><p>{{ fecha(pedido.fecha) }}</p><p>{{ dinero(pedido.total) }}</p></ion-label>
+        <ion-badge v-if="pedido.sin_enviar" color="warning">Sin enviar</ion-badge>
         <ion-badge :color="color_estado(pedido.estado)">{{ pedido.estado }}</ion-badge>
       </ion-item>
     </ion-list>
@@ -64,7 +71,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
-import { IonBadge, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonText, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
+import { IonBadge, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonNote, IonText, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import CompPage from '../components/base/comp-page.vue';
 import CompEsqueleto from '../components/base/comp-esqueleto.vue';
 import CompPedidoFormulario from '../components/comp-pedido-formulario.vue';
@@ -72,8 +79,11 @@ import { sesion } from '../services/auth_service';
 import { obtener_pedidos, obtener_pedido, cambiar_estado_pedido, obtener_qr_pedido, obtener_comprobante_pedido, codigo_pedido, parsear_codigo_pedido, type Pedido, type PedidoDetalle, type EstadoPedido } from '../services/pedidos_service';
 import { compartir_pdf } from '../services/compartir_service';
 import { escanear_pedido } from '../services/escaner_service';
+import { avisar } from '../services/aviso_service';
+import { con_cambios_sin_enviar, use_offline_store } from '../stores/offline_store';
 
 const es_nativo = Capacitor.isNativePlatform();
+const offline = use_offline_store();
 const route = useRoute(), activo = ref(false);
 const puede_crear = computed(() => ['superadmin', 'administrador', 'vendedor'].includes(sesion.usuario.value?.rol || ''));
 const puede_estado = computed(() => ['superadmin', 'administrador', 'vendedor', 'caja'].includes(sesion.usuario.value?.rol || ''));
@@ -96,7 +106,10 @@ function mensaje(error: unknown) {
 async function cargar() {
   const version = ++lista_version;
   cargando.value = true; error_lista.value = '';
-  try { const respuesta = await obtener_pedidos(); if (version === lista_version) pedidos.value = respuesta.pedidos; }
+  try {
+    const respuesta = await obtener_pedidos();
+    if (version === lista_version) pedidos.value = respuesta.pedidos.map(con_cambios_sin_enviar);
+  }
   catch (error) { if (version === lista_version) error_lista.value = mensaje(error); }
   finally { if (version === lista_version) cargando.value = false; }
 }
@@ -132,7 +145,10 @@ async function abrir_detalle(id: number) {
   cerrar_detalle();
   const version = detalle_version;
   detalle_id.value = id; cargando_detalle.value = true;
-  try { const respuesta = await obtener_pedido(id); if (version === detalle_version) detalle.value = respuesta; }
+  try {
+    const respuesta = await obtener_pedido(id);
+    if (version === detalle_version) detalle.value = con_cambios_sin_enviar(respuesta);
+  }
   catch (error) { if (version === detalle_version) error_detalle.value = mensaje(error); }
   finally { if (version === detalle_version) cargando_detalle.value = false; }
 }
@@ -153,6 +169,16 @@ async function cambiar_estado(estado: EstadoPedido) {
   const actual = detalle.value;
   if (!actual || cambiando.value || !puede_estado.value || actual.estado !== 'En preparacion') return;
   if (estado === 'Cancelado' && !window.confirm('Cancelar este pedido? Esta accion no se puede deshacer.')) return;
+
+  // Sin red el cambio no sale: espera en la cola y se dibuja con el estado nuevo.
+  if (offline.sin_conexion.value) {
+    offline.encolar(actual.id, estado);
+    detalle.value = con_cambios_sin_enviar(actual);
+    pedidos.value = pedidos.value.map(con_cambios_sin_enviar);
+    void avisar('Cambio guardado sin conexión. Se envía solo cuando vuelva la red.');
+    return;
+  }
+
   const version = detalle_version;
   cambiando.value = true; error_detalle.value = '';
   try {
@@ -193,8 +219,16 @@ function salir() {
   cargando.value = false; pedidos.value = [];
 }
 watch(() => route.query.pedido, () => { if (activo.value) abrir_pedido_consulta(); });
+// Cuando la cola baja, la lista se recarga sola y muestra lo que de verdad quedo.
+watch(() => offline.ultima_sincronizacion.value, () => {
+  if (!activo.value) return;
+  void cargar();
+  if (detalle_id.value !== null) void abrir_detalle(detalle_id.value);
+});
 onIonViewWillEnter(() => {
   activo.value = true; vida = new AbortController(); void cargar(); abrir_pedido_consulta();
+  // Por si quedo algo en la cola y la red volvio con la app cerrada.
+  void offline.sincronizar();
 });
 onIonViewWillLeave(salir);
 onBeforeUnmount(salir);

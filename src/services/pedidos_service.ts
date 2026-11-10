@@ -1,7 +1,7 @@
 import { ajax_binario, ajax_request } from './ajax_service';
 
 export type EstadoPedido = 'En preparacion' | 'Listo' | 'Cancelado';
-export type Pedido = { id: number; cliente: string; fecha: string; estado: EstadoPedido; total: number; empresa_id: number; usuario_id: number; nombre_empresa: string };
+export type Pedido = { id: number; cliente: string; fecha: string; estado: EstadoPedido; total: number; empresa_id: number; usuario_id: number; nombre_empresa: string; sin_enviar?: boolean };
 export type PedidoItem = {
   id: number; productoId: number | null; nombre: string;
   precioUnitario: number; cantidad: number; subtotal: number;
@@ -24,11 +24,11 @@ export function parsear_codigo_pedido(codigo: string): number {
 }
 
 export function obtener_pedidos() {
-  return ajax_request<{ pedidos: Pedido[] }>('/api/pedidos');
+  return ajax_request<{ pedidos: Pedido[] }>('/api/pedidos', { guardable: true });
 }
 export function obtener_pedido(id: number) {
   codigo_pedido(id);
-  return ajax_request<PedidoDetalle>(`/api/pedidos/${id}`);
+  return ajax_request<PedidoDetalle>(`/api/pedidos/${id}`, { guardable: true });
 }
 export function crear_pedido(datos: PedidoRequest) {
   return ajax_request<PedidoDetalle>('/api/pedidos', { method: 'POST', body: datos });

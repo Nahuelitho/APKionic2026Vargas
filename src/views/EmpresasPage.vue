@@ -66,7 +66,7 @@ function ir_a_detalle(id: number) {
 }
 
 function ir_a_productos(id: number) {
-  router.push(`/app/productos?empresaId=${id}`);
+  router.push(`/app/empresas/${id}/productos`);
 }
 
 async function cargar() {

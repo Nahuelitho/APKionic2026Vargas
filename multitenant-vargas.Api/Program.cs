@@ -14,10 +14,31 @@ using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-const string corsPolicy = "IonicDevelopment";
+const string corsPolicy = "IonicApp";
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? throw new InvalidOperationException("No se configuro ConnectionStrings:Default.");
+var connectionString = builder.Configuration.GetConnectionString("BaseDeDatos")
+    ?? throw new InvalidOperationException("No se configuro ConnectionStrings:BaseDeDatos.");
+
+// Fuera de desarrollo la clave JWT es obligatoria y debe tener fuerza suficiente.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (!builder.Environment.IsDevelopment() && (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32))
+{
+    throw new InvalidOperationException(
+        "No se configuro Jwt:Key, o tiene menos de 32 caracteres. " +
+        "Configurala en las variables de entorno del hosting (Jwt__Key).");
+}
+
+// El administrador de produccion no puede conservar la clave publica del taller.
+var adminPassword = builder.Configuration["Admin:Password"] ?? string.Empty;
+if (adminPassword.Length < 8 && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "No se configuro Admin:Password, o tiene menos de 8 caracteres. " +
+        "Configurala en las variables de entorno del hosting (Admin__Password).");
+}
+
+// Los origenes CORS salen de configuracion. Nunca se hardcodea una IP local.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 
 builder.Services.AddControllers().AddJsonOptions(options => ConfigurarJson(options.JsonSerializerOptions));
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -47,7 +68,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(corsPolicy, policy =>
     {
         policy
-            .SetIsOriginAllowed(EsOrigenDesarrolloPermitido)
+            .SetIsOriginAllowed(origin => EsOrigenPermitido(origin, allowedOrigins, builder.Environment.IsDevelopment()))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -120,6 +141,26 @@ Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "productos"));
 builder.Environment.WebRootPath = webRoot;
 builder.Environment.WebRootFileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot);
 var app = builder.Build();
+
+// Migraciones y sincronizacion del administrador de produccion al arrancar.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
+    // En produccion, la clave del panel reemplaza a la del taller.
+    if (adminPassword.Length >= 8)
+    {
+        var admin = await db.Usuarios.FirstOrDefaultAsync(x => x.Email == "admin@vargas.com");
+        // Se compara antes de guardar: el hash no se reescribe en cada arranque.
+        if (admin is not null && !PasswordService.Verificar(adminPassword, admin.PasswordHash))
+        {
+            admin.PasswordHash = PasswordService.Hash(adminPassword);
+            await db.SaveChangesAsync();
+        }
+    }
+}
+
 app.UseExceptionHandler(error => error.Run(async context =>
 {
     var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
@@ -163,13 +204,22 @@ static void ConfigurarJson(JsonSerializerOptions options)
     options.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
     options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
 }
-static bool EsOrigenDesarrolloPermitido(string origin)
+static bool EsOrigenPermitido(string origin, string[] allowedOrigins, bool development)
 {
+    if (string.IsNullOrWhiteSpace(origin)) return false;
+
+    // 1) Lista explicita de configuracion (Cors:AllowedOrigins).
+    if (allowedOrigins.Any(configurado =>
+            string.Equals(configurado.TrimEnd('/'), origin.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+        return true;
+
     if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
 
-    if (uri.Scheme is "capacitor" or "ionic" && uri.Host == "localhost") return true;
+    // 2) Origen nativo de la app instalada (Capacitor/Ionic).
+    if (uri.Host == "localhost" && uri.Scheme is "capacitor" or "ionic" or "http" or "https") return true;
 
-    if (uri.Scheme is not ("http" or "https")) return false;
+    // 3) Solo en desarrollo se toleran localhost y la red local para probar desde la PC o el celular.
+    if (!development || uri.Scheme is not ("http" or "https")) return false;
 
     if (uri.Host is "localhost" or "127.0.0.1") return true;
 

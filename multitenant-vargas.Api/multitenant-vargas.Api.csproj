@@ -22,4 +22,9 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
+  <!-- Lo que se subio probando en la PC no viaja a produccion. -->
+  <ItemGroup>
+    <Content Update="wwwroot\uploads\**" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
