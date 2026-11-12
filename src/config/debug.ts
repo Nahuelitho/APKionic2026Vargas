@@ -1,7 +1,7 @@
 const api_url_debug_predeterminada = 'http://localhost:5002';
 
 // La API publicada: una URL publica no es un secreto, puede ir en el codigo.
-const api_url_produccion = 'https://multitenantvargas.runasp.net';
+const api_url_produccion = 'https://apkionic2026vargas.onrender.com';
 
 export const debug_config = {
   debug_activado: import.meta.env.VITE_DEBUG_ACTIVADO !== 'false',
