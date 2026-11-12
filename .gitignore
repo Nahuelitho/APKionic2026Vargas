@@ -1,6 +1,4 @@
-# Specifies intentionally untracked files to ignore when using Git
-# http://git-scm.com/docs/gitignore
-
+# Archivos del sistema / editores
 *~
 *.sw[mnpcod]
 .tmp
@@ -12,18 +10,18 @@
 Thumbs.db
 UserInterfaceState.xcuserstate
 $RECYCLE.BIN/
-
 *.log
 log.txt
 npm-debug.log*
-
 /.idea
+/.vscode/*
+!/.vscode/extensions.json
+
+# Frontend Ionic / Vue
 /.ionic
 /.sass-cache
 /.sourcemaps
 /.versions
-/.vscode/*
-!/.vscode/extensions.json
 /coverage
 /dist
 /node_modules
@@ -31,35 +29,41 @@ npm-debug.log*
 /plugins
 /www
 
-# .NET build output
+# .NET - build output (ACA ESTABA EL PROBLEMA)
 bin/
 obj/
-
-# Paquetes de publicacion (pueden llevar configuracion local)
-$salida/
+out/
+publish/
 publish-api/
+$salida/
+
+# Binarios - nunca se suben a GitHub, se regeneran con dotnet publish
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
 *.zip
 
 # Documentacion interna / SDD
-docs/SDD_Multitenant_Vargas.md
-SDD*.md
 *SDD*.md
 
-# Android signing
-android/keystore.properties
+# 【entity-Android¦canonical_name=Android】 signing - secretos
+【entity-android¦canonical_name=Android】/keystore.properties
 *.jks
 *.keystore
 keystore/
-android/app/release/
+【entity-android¦canonical_name=Android】/app/release/
 
-# Firebase / Google services
-google-services*.json
+# Firebase / Google services - secretos
 **/google-services.json
 **/firebase-adminsdk-*.json
 **/ServiceAccountKey.json
 
-# Env files
+# Env files - secretos
 .env
 .env.local
 .env.*.local
-# .env.release SI se versiona: es la configuracion del APK y no tiene secretos.
+.env.release
+.env.production
