@@ -3,31 +3,29 @@
     <ion-card-header><ion-card-title>{{ empresa ? 'Catalogo y carrito' : 'Nuevo pedido'
         }}</ion-card-title></ion-card-header>
     <ion-card-content>
-      <ion-input v-model="cliente" label="Cliente" label-placement="stacked" :maxlength="160" :disabled="creando" />
+      <ion-input v-model="cliente" label="Cliente" label-placement="stacked" :maxlength="160" :disabled="creando"
+        helper-text="Obligatorio: es el nombre que identifica el pedido. Hasta 160 caracteres." />
       <ion-select v-if="!empresa" :model-value="empresa_id" label="Empresa del pedido" label-placement="stacked"
-        :disabled="creando || cargando_empresas" @ionChange="cambiar_empresa($event.detail.value, $event)">
+        :disabled="creando || cargando_empresas" helper-text="Obligatorio: todos los productos deben ser de la misma empresa."
+        @ionChange="cambiar_empresa($event.detail.value, $event)">
         <ion-select-option v-for="opcion in empresas" :key="opcion.id" :value="opcion.id">{{ opcion.nombre_empresa
           }}</ion-select-option>
       </ion-select>
       <p v-if="cargando_empresas">Cargando empresas...</p>
-      <ion-text v-if="error_empresas" color="danger">
-        <p role="alert">{{ error_empresas }}</p>
-      </ion-text>
-      <ion-button v-if="error_empresas" fill="outline" @click="cargar_empresas">Reintentar empresas</ion-button>
+      <comp-aviso v-if="error_empresas" tipo="peligro" :mensaje="error_empresas" accion="Reintentar" @accion="cargar_empresas" />
       <p>Selecciona productos disponibles del catalogo.</p>
       <p v-if="cargando_productos">Cargando productos...</p>
-      <ion-text v-if="error_productos" color="danger">
-        <p role="alert">{{ error_productos }}</p>
-      </ion-text>
-      <ion-button v-if="error_productos" fill="outline" :disabled="creando" @click="cargar_productos(pagina)">Reintentar
-        catalogo</ion-button>
+      <comp-aviso v-if="error_productos" tipo="peligro" :mensaje="error_productos" accion="Reintentar catálogo" :accion_deshabilitada="creando" @accion="cargar_productos(pagina)" />
       <ion-list>
         <ion-item v-for="producto in productos" :key="producto.id">
           <comp-producto-foto v-if="producto.fotoUrl" slot="start" class="foto" :foto-url="producto.fotoUrl"
             :alt="producto.nombre" />
           <ion-label class="ion-text-wrap">{{ producto.nombre }}<p v-if="producto.descripcion">{{ producto.descripcion
               }}</p>
-            <p>{{ dinero(producto.precio) }} · {{ producto.stock ? 'Disponible' : 'Sin stock' }}</p>
+            <p class="precio-stock">
+              {{ dinero(producto.precio) }}
+              <comp-estado :definicion="producto.stock ? ESTADOS_STOCK.disponible : ESTADOS_STOCK.sin_stock" />
+            </p>
           </ion-label>
           <ion-button slot="end" fill="outline"
             :disabled="creando || !producto.stock || renglones.length >= 100 || renglones.some(r => r.producto.id === producto.id)"
@@ -56,9 +54,7 @@
       </div>
       <p><strong>Total orientativo: {{ dinero(total_orientativo) }}</strong></p>
       <p>El servidor confirma los precios y la disponibilidad al crear el pedido.</p>
-      <ion-text v-if="error_crear" color="danger">
-        <p role="alert">{{ error_crear }}</p>
-      </ion-text>
+      <comp-aviso v-if="error_crear" tipo="peligro" :mensaje="error_crear" />
       <ion-button expand="block" :disabled="creando || !renglones.length || !empresa_id" @click="crear">{{ creando ?
         'Creando...' : 'Confirmar pedido' }}</ion-button>
     </ion-card-content>
@@ -68,8 +64,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonText } from '@ionic/vue';
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonSelect, IonSelectOption } from '@ionic/vue';
 import CompProductoFoto from './comp-producto-foto.vue';
+import CompAviso from './base/comp-aviso.vue';
+import CompEstado from './base/comp-estado.vue';
+import { ESTADOS_STOCK } from '../config/estados';
 import { sesion } from '../services/auth_service';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 import { obtener_productos, type Producto } from '../services/productos_service';
@@ -155,6 +154,8 @@ async function crear() {
   }
   if (!Number.isFinite(total_orientativo.value) || total_orientativo.value > 9999999999.99) { error_crear.value = 'El total supera el importe permitido.'; return; }
   if (!empresa_id.value || renglones.value.some(r => r.producto.empresa_id !== empresa_id.value)) { error_crear.value = 'Seleccione productos de una unica empresa.'; return; }
+  const resumen = renglones.value.map(r => `${r.cantidad} × ${r.producto.nombre}`).join('\n');
+  if (!window.confirm(`¿Confirmar el pedido de ${nombre}?\n\n${resumen}\nTotal orientativo: ${dinero(total_orientativo.value)}`)) return;
   creando.value = true;
   try {
     const nuevo = await crear_pedido({ cliente: nombre, empresa_id: empresa_id.value, items: renglones.value.map(r => ({ productoId: r.producto.id, cantidad: Number(r.cantidad) })) });
@@ -194,6 +195,13 @@ onBeforeUnmount(() => {
   height: 56px;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.precio-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .renglon {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -251,17 +252,24 @@ internal sealed class TenantApplication : WebApplicationFactory<Program>
         Directory.CreateDirectory(root); connection.Open();
         builder.UseEnvironment("Testing").UseContentRoot(root);
         builder.UseSetting("ConnectionStrings:Default", "Server=unused;Database=unused;User=unused;Password=unused");
+        builder.UseSetting("ConnectionStrings:BaseDeDatos", "Server=unused;Database=unused;User=unused;Password=unused");
         builder.UseSetting("Jwt:Key", "integration-tests-only-key-at-least-32-characters");
         builder.UseSetting("Jwt:Issuer", "tests"); builder.UseSetting("Jwt:Audience", "tests");
+        builder.UseSetting("Admin:Password", "integration-tests-admin-password");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> {
             ["ConnectionStrings:Default"] = "Server=unused;Database=unused;User=unused;Password=unused",
+            ["ConnectionStrings:BaseDeDatos"] = "Server=unused;Database=unused;User=unused;Password=unused",
             ["Logging:LogLevel:Default"] = "Warning",
+            ["Admin:Password"] = "integration-tests-admin-password",
             ["Jwt:Key"] = "integration-tests-only-key-at-least-32-characters", ["Jwt:Issuer"] = "tests", ["Jwt:Audience"] = "tests" }));
         builder.ConfigureServices(services =>
         {
             foreach (var descriptor in services.Where(x => x.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
                 x.ServiceType == typeof(IDbContextOptionsConfiguration<AppDbContext>) || x.ServiceType == typeof(AppDbContext)).ToArray()) services.Remove(descriptor);
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection).ReplaceService<IModelCustomizer, SqliteTestModelCustomizer>());
+            services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection)
+                .ReplaceService<IModelCustomizer, SqliteTestModelCustomizer>()
+                // El modelo de test agrega CHECKs propios de SQLite: no debe compararse con el snapshot MySQL.
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
         });
     }
     public async Task Seed()

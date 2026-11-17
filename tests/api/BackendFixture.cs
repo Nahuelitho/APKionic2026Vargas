@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using multitenant_vargas.Api.Controllers;
@@ -57,9 +58,12 @@ internal sealed class BackendScope : IDisposable
     }
 
     public AppDbContext NewContext() => new(options);
+    // Los tests no configuran Firebase: PushService queda deshabilitado y solo avisa por log.
+    private static readonly PushService Push = new(
+        new ConfigurationBuilder().Build(), NullLogger<PushService>.Instance);
     public static PedidosController Controller(AppDbContext db)
     {
-        var controller = new PedidosController(db, NullLogger<PedidosController>.Instance);
+        var controller = new PedidosController(db, Push, NullLogger<PedidosController>.Instance);
         Autenticar(controller);
         return controller;
     }

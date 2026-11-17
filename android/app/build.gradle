@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
+
+// google-services se aplica al final, solo si el archivo existe (no versionado).
 
 // El build firma solo si existe keystore.properties (nunca versionado).
 def keystoreProperties = new Properties()

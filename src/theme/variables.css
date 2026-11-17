@@ -1,2 +1,130 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/* ============================================================
+   U9 - Normalizacion del diseno
+   Un solo lugar para radio, sombra, grises, espacios y tipografia.
+   Las pantallas consumen estas variables: si cambia el valor,
+   cambia toda la app.
+   ============================================================ */
+
+:root {
+  /* Radios */
+  --app-radio-xs: 8px;
+  --app-radio-sm: 12px;
+  --app-radio-md: 16px;
+  --app-radio-lg: 22px;
+  --app-radio-pill: 999px;
+
+  /* Sombras (dos niveles: reposo y elevado) */
+  --app-sombra-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --app-sombra-2: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+  /* Grises */
+  --app-gris-50: #f8fafc;
+  --app-gris-100: #f1f5f9;
+  --app-gris-200: #e2e8f0;
+  --app-gris-300: #cbd5e1;
+  --app-gris-400: #94a3b8;
+  --app-gris-500: #64748b;
+  --app-gris-600: #475569;
+  --app-gris-700: #334155;
+  --app-gris-800: #1e293b;
+  --app-gris-900: #0f172a;
+
+  /* Superficies y bordes */
+  --app-superficie: var(--app-gris-50);
+  --app-tarjeta: #ffffff;
+  --app-borde: var(--app-gris-200);
+  --app-texto: var(--app-gris-900);
+  --app-texto-suave: var(--app-gris-500);
+
+  /* Espaciado */
+  --app-espacio-1: 4px;
+  --app-espacio-2: 8px;
+  --app-espacio-3: 12px;
+  --app-espacio-4: 16px;
+  --app-espacio-5: 24px;
+  --app-espacio-6: 32px;
+
+  /* Tipografia */
+  --app-texto-xs: 0.75rem;
+  --app-texto-sm: 0.875rem;
+  --app-texto-md: 1rem;
+  --app-texto-lg: 1.25rem;
+  --app-texto-xl: 1.5rem;
+
+  /* Colores de estado (los usan los chips de comp-estado) */
+  --app-estado-exito-texto: #166534;
+  --app-estado-exito-fondo: #dcfce7;
+  --app-estado-aviso-texto: #92400e;
+  --app-estado-aviso-fondo: #fef3c7;
+  --app-estado-peligro-texto: #991b1b;
+  --app-estado-peligro-fondo: #fee2e2;
+  --app-estado-neutral-texto: var(--app-gris-600);
+  --app-estado-neutral-fondo: var(--app-gris-100);
+  --app-estado-info-texto: #1e40af;
+  --app-estado-info-fondo: #dbeafe;
+
+  /* Ionic: alinear la app con los mismos tokens */
+  --ion-background-color: var(--app-superficie);
+  --ion-card-background: var(--app-tarjeta);
+  --ion-item-background: var(--app-tarjeta);
+}
+
+.ion-palette-dark {
+  --app-superficie: #0b1220;
+  --app-tarjeta: #131d30;
+  --app-borde: #253147;
+  --app-texto: #e2e8f0;
+  --app-texto-suave: #94a3b8;
+
+  --app-sombra-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --app-sombra-2: 0 8px 24px rgba(0, 0, 0, 0.55);
+
+  --app-estado-exito-texto: #bbf7d0;
+  --app-estado-exito-fondo: #14532d;
+  --app-estado-aviso-texto: #fde68a;
+  --app-estado-aviso-fondo: #78350f;
+  --app-estado-peligro-texto: #fecaca;
+  --app-estado-peligro-fondo: #7f1d1d;
+  --app-estado-neutral-texto: #cbd5e1;
+  --app-estado-neutral-fondo: #253147;
+  --app-estado-info-texto: #bfdbfe;
+  --app-estado-info-fondo: #1e3a8a;
+
+  --ion-background-color: var(--app-superficie);
+  --ion-card-background: var(--app-tarjeta);
+  --ion-item-background: var(--app-tarjeta);
+}
+
+/* Helpers compartidos: margen generoso, jerarquia y tarjetas parejas. */
+.app-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-espacio-4);
+}
+
+.app-tarjeta {
+  margin: 0;
+  border-radius: var(--app-radio-md);
+  box-shadow: var(--app-sombra-1);
+  border: 1px solid var(--app-borde);
+  background: var(--app-tarjeta);
+}
+
+.app-titulo-seccion {
+  margin: 0;
+  font-size: var(--app-texto-lg);
+  font-weight: 700;
+  color: var(--app-texto);
+}
+
+.app-texto-suave {
+  color: var(--app-texto-suave);
+  font-size: var(--app-texto-sm);
+}
+
+.app-acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-espacio-2);
+}

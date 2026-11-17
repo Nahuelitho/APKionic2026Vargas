@@ -49,17 +49,18 @@ $salida/
 # Documentacion interna / SDD
 *SDD*.md
 
-# 【entity-Android¦canonical_name=Android】 signing - secretos
-【entity-android¦canonical_name=Android】/keystore.properties
+# Android signing - secretos
+android/keystore.properties
 *.jks
 *.keystore
 keystore/
-【entity-android¦canonical_name=Android】/app/release/
+android/app/release/
 
 # Firebase / Google services - secretos
 **/google-services.json
 **/firebase-adminsdk-*.json
 **/ServiceAccountKey.json
+**/*service-account*.json
 
 # Env files - secretos
 .env
@@ -67,3 +68,11 @@ keystore/
 .env.*.local
 .env.release
 .env.production
+
+# Keystore - NO SUBIR NUNCA
+*.keystore
+*.jks
+*.key
+android/keystore.properties
+**/keystore.properties
+keystore.properties

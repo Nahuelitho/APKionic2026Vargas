@@ -12,14 +12,14 @@
     <ion-card>
       <ion-card-header><ion-card-title>Nuevo usuario</ion-card-title><ion-card-subtitle>{{ global ? 'Sin membresia: usuario comun' : 'Selecciona un rol de tu empresa' }}</ion-card-subtitle></ion-card-header>
       <ion-card-content>
-        <ion-input v-model="nuevo.nombre" label="Nombre" label-placement="stacked" />
-        <ion-input v-model="nuevo.email" type="email" label="Email" label-placement="stacked" />
-        <ion-input v-model="nuevo.password" type="password" label="Contraseña" label-placement="stacked" />
+        <ion-input v-model="nuevo.nombre" label="Nombre" label-placement="stacked" helper-text="Obligatorio: nombre visible del usuario." />
+        <ion-input v-model="nuevo.email" type="email" label="Email" label-placement="stacked" helper-text="Obligatorio: con este email inicia sesión." />
+        <ion-input v-model="nuevo.password" type="password" label="Contraseña" label-placement="stacked" helper-text="Obligatoria: mínimo 8 caracteres." />
         <ion-select v-model="nuevo.rol_id" label="Rol" label-placement="stacked" placeholder="Sin rol">
           <ion-select-option v-if="global" :value="null">Sin membresia</ion-select-option>
           <ion-select-option v-for="rol in roles" :key="rol.id" :value="rol.id">{{ rol.nombre }}</ion-select-option>
         </ion-select>
-        <ion-text v-if="error" color="danger"><p>{{ error }}</p></ion-text>
+        <comp-aviso v-if="error" tipo="peligro" :mensaje="error" />
         <ion-button expand="block" @click="crear">Crear usuario</ion-button>
       </ion-card-content>
     </ion-card>
@@ -38,8 +38,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonText, onIonViewWillEnter } from '@ionic/vue';
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, onIonViewWillEnter } from '@ionic/vue';
 import CompPage from '../components/base/comp-page.vue';
+import CompAviso from '../components/base/comp-aviso.vue';
 import { asignar_rol, crear_usuario, listar_roles, listar_usuarios, type Rol, type UsuarioAdmin } from '../services/usuarios_service';
 import { sesion } from '../services/auth_service';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
@@ -57,11 +58,22 @@ async function cargar() {
 }
 async function crear() {
   error.value = '';
+  if (!nuevo.nombre.trim() || !nuevo.email.trim() || !nuevo.password) {
+    error.value = 'El nombre, el email y la contraseña son obligatorios.';
+    return;
+  }
+  if (nuevo.password.length < 8) { error.value = 'La contraseña debe tener al menos 8 caracteres.'; return; }
+  if (!window.confirm(`¿Crear el usuario ${nuevo.nombre.trim()}?`)) return;
   try { await crear_usuario({ ...nuevo, empresa_id: global.value ? empresa_id.value : sesion.usuario.value?.empresa_id }); Object.assign(nuevo, { nombre: '', email: '', password: '', rol_id: null }); await cargar(); }
   catch (e: any) { error.value = e.mensaje || 'No se pudo crear el usuario.'; }
 }
 async function cambiar_rol(id: number, event: CustomEvent) {
-  try { await asignar_rol(id, event.detail.value ?? null, global.value ? empresa_id.value : sesion.usuario.value?.empresa_id); await cargar(); }
+  const valor = event.detail.value ?? null;
+  const quitar = valor === null;
+  if (!window.confirm(quitar
+    ? '¿Quitar la membresía de este usuario en el ámbito seleccionado?'
+    : '¿Asignar este rol al usuario en el ámbito seleccionado?')) return;
+  try { await asignar_rol(id, valor, global.value ? empresa_id.value : sesion.usuario.value?.empresa_id); await cargar(); }
   catch (e: any) { error.value = e.mensaje || 'No se pudo asignar el rol.'; }
 }
 async function actualizar(event: CustomEvent) { await cargar(); (event.target as HTMLIonRefresherElement).complete(); }

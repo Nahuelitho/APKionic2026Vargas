@@ -1,60 +1,73 @@
 <template>
   <comp-page titulo="Notificaciones" :mostrar_actualizar="true" @actualizar="actualizar">
-    <ion-card v-if="no_leidas > 0">
-      <ion-card-content class="cabecera">
-        <span>{{ no_leidas }} sin leer</span>
-        <ion-button size="small" fill="outline" :disabled="marcando" @click="marcar_todas">
-          {{ marcando ? 'Marcando...' : 'Marcar todas como leidas' }}
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-    <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-    <ion-button v-if="error" fill="outline" :disabled="cargando" @click="cargar_notificaciones">Reintentar</ion-button>
-
-    <comp-esqueleto v-if="cargando && !notificaciones.length" />
-    <p v-else-if="!notificaciones.length && !error">No tenes notificaciones.</p>
-
-    <ion-list v-else>
-      <ion-item
-        v-for="notificacion in notificaciones"
-        :key="notificacion.id"
-        button
-        @click="abrir(notificacion)"
+    <header class="resumen">
+      <div class="resumen-texto">
+        <h1>Tu bandeja</h1>
+        <p class="app-texto-suave">
+          {{ no_leidas > 0 ? `${no_leidas} sin leer` : 'Estás al día' }}
+        </p>
+      </div>
+      <ion-button
+        v-if="no_leidas > 0"
+        size="small"
+        fill="outline"
+        :disabled="marcando"
+        @click="marcar_todas"
       >
-        <ion-icon
-          slot="start"
-          :icon="notificacion.leida ? mailOpenOutline : mailUnreadOutline"
-          :color="notificacion.leida ? 'medium' : 'primary'"
-        />
-        <ion-label class="ion-text-wrap" :class="{ 'sin-leer': !notificacion.leida }">
-          <h3>{{ notificacion.titulo }}</h3>
-          <p>{{ notificacion.mensaje }}</p>
-          <p class="fecha">{{ fecha(notificacion.fecha) }}</p>
-        </ion-label>
-        <ion-badge v-if="!notificacion.leida" color="danger">Nueva</ion-badge>
-      </ion-item>
-    </ion-list>
+        {{ marcando ? 'Marcando...' : 'Marcar todas' }}
+      </ion-button>
+    </header>
+
+    <comp-lista
+      :cargando="cargando"
+      :error="error || ''"
+      :items="notificaciones.length"
+      texto_vacio="Todavía no tenés notificaciones. Cuando cambie un pedido, aparece acá y también como push."
+      vacio_tipo="info"
+      :filas_esqueleto="4"
+      @reintentar="cargar_notificaciones"
+    >
+      <ion-list class="lista-notificaciones">
+        <ion-item
+          v-for="notificacion in notificaciones"
+          :key="notificacion.id"
+          button
+          :detail="Boolean(notificacion.pedido_id)"
+          class="notificacion"
+          :class="{ 'sin-leer': !notificacion.leida }"
+          @click="abrir(notificacion)"
+        >
+          <div slot="start" class="punto" :class="{ activo: !notificacion.leida }" aria-hidden="true" />
+          <ion-label class="ion-text-wrap">
+            <h2>{{ notificacion.titulo }}</h2>
+            <p>{{ notificacion.mensaje }}</p>
+            <p class="fecha">
+              <ion-icon :icon="timeOutline" aria-hidden="true" />
+              {{ fecha(notificacion.fecha) }}
+            </p>
+          </ion-label>
+          <comp-estado slot="end" :definicion="notificacion.leida ? ESTADOS_NOTIFICACION.leida : ESTADOS_NOTIFICACION.nueva" />
+        </ion-item>
+      </ion-list>
+    </comp-lista>
   </comp-page>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import {
-  IonBadge,
   IonButton,
-  IonCard,
-  IonCardContent,
   IonIcon,
   IonItem,
   IonLabel,
   IonList,
-  IonText,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { mailOpenOutline, mailUnreadOutline } from 'ionicons/icons';
+import { timeOutline } from 'ionicons/icons';
 import CompPage from '../components/base/comp-page.vue';
-import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompLista from '../components/base/comp-lista.vue';
+import CompEstado from '../components/base/comp-estado.vue';
+import { ESTADOS_NOTIFICACION } from '../config/estados';
 import { use_notificaciones_store } from '../stores/notificaciones_store';
 import type { Notificacion } from '../services/notificaciones_service';
 
@@ -78,7 +91,8 @@ async function actualizar(event: CustomEvent) {
 }
 
 async function abrir(notificacion: Notificacion) {
-  await marcar_leida(notificacion.id);
+  // Primero se abre el dato aunque falle el "marcar leida": el toque nunca se pierde.
+  if (!notificacion.leida) void marcar_leida(notificacion.id);
   if (notificacion.pedido_id) {
     await router.push({ path: '/app/pedidos', query: { pedido: String(notificacion.pedido_id) } });
   }
@@ -88,8 +102,63 @@ onIonViewWillEnter(() => { void cargar_notificaciones(); });
 </script>
 
 <style scoped>
-.cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.sin-leer h3 { font-weight: 700; }
-.fecha { color: var(--ion-color-medium); font-size: 0.8rem; }
-ion-item ion-badge { max-width: 90px; white-space: normal; text-align: center; }
+.resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-espacio-3);
+  flex-wrap: wrap;
+}
+
+.resumen-texto h1 {
+  margin: 0;
+  font-size: var(--app-texto-xl);
+  font-weight: 800;
+  color: var(--app-texto);
+}
+
+.resumen-texto p { margin: 2px 0 0; }
+
+.lista-notificaciones {
+  margin: 0;
+  border-radius: var(--app-radio-md);
+  overflow: hidden;
+  border: 1px solid var(--app-borde);
+  box-shadow: var(--app-sombra-1);
+}
+
+.notificacion {
+  --padding-start: var(--app-espacio-3);
+  --inner-padding-end: var(--app-espacio-3);
+}
+
+.sin-leer { --background: var(--app-estado-info-fondo); }
+
+.punto {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--app-radio-pill);
+  background: var(--app-gris-300);
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.punto.activo { background: var(--ion-color-primary); }
+
+.notificacion h2 {
+  font-size: var(--app-texto-md);
+  font-weight: 500;
+}
+
+.sin-leer h2 { font-weight: 700; }
+
+.fecha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--app-texto-suave);
+  font-size: var(--app-texto-xs);
+}
+
+.fecha ion-icon { font-size: 12px; }
 </style>

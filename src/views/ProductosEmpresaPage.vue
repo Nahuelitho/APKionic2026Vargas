@@ -4,13 +4,14 @@
 
     <comp-esqueleto v-if="cargando && !empresa" />
 
-    <ion-card v-if="error && !empresa">
-      <ion-card-header><ion-card-title>No se pudo abrir la empresa</ion-card-title></ion-card-header>
-      <ion-card-content>
-        <p>{{ error }}</p>
-        <ion-button expand="block" @click="cargar">Reintentar</ion-button>
-      </ion-card-content>
-    </ion-card>
+    <comp-aviso
+      v-if="error && !empresa"
+      tipo="peligro"
+      titulo="No se pudo abrir la empresa"
+      :mensaje="error"
+      accion="Reintentar"
+      @accion="cargar"
+    />
 
     <template v-if="empresa">
       <ion-card v-if="puede_gestionar">
@@ -20,9 +21,11 @@
         </ion-card-header>
 
         <ion-card-content>
-          <ion-input v-model="formulario.nombre" label="Nombre" label-placement="stacked" placeholder="Ej: Yerba mate" />
+          <ion-input v-model="formulario.nombre" label="Nombre" label-placement="stacked" placeholder="Ej: Yerba mate"
+            helper-text="Obligatorio: identifica el producto en el catálogo." />
           <ion-textarea v-model="formulario.descripcion" label="Descripcion" label-placement="stacked" placeholder="Detalle del producto" />
-          <ion-input v-model.number="formulario.precio" type="number" label="Precio" label-placement="stacked" placeholder="0" />
+          <ion-input v-model.number="formulario.precio" type="number" label="Precio" label-placement="stacked" placeholder="0"
+            helper-text="Obligatorio: debe ser mayor a 0." />
 
           <ion-item lines="none">
             <ion-toggle :key="`${producto_editando_id || 'nuevo'}-${formulario.stock}`" :checked="formulario.stock" @ionChange="cambiar_stock">
@@ -44,10 +47,10 @@
             </div>
             <input ref="selector_foto" type="file" accept="image/jpeg,image/png,image/webp" hidden @change="seleccionar_archivo" />
             <p v-if="seleccionando_foto">Obteniendo foto...</p>
-            <ion-text v-if="error_foto" color="danger"><p>{{ error_foto }}</p></ion-text>
+            <comp-aviso v-if="error_foto" tipo="peligro" :mensaje="error_foto" />
           </div>
 
-          <ion-text v-if="error_formulario" color="danger"><p>{{ error_formulario }}</p></ion-text>
+          <comp-aviso v-if="error_formulario" tipo="peligro" :mensaje="error_formulario" />
 
           <ion-button expand="block" :disabled="guardando || seleccionando_foto || cargando_edicion" @click="guardar">
             {{ guardando ? 'Guardando...' : producto_editando_id ? 'Guardar cambios' : 'Crear producto' }}
@@ -66,8 +69,7 @@
         <ion-card-content>
           <comp-esqueleto v-if="cargando && !productos.length" />
 
-          <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-          <ion-button v-if="error" fill="outline" @click="cargar_productos(pagina)">Reintentar</ion-button>
+          <comp-aviso v-if="error" tipo="peligro" :mensaje="error" accion="Reintentar" @accion="cargar_productos(pagina)" />
 
           <p v-else-if="!cargando && !productos.length">Esta empresa todavía no tiene productos cargados.</p>
 
@@ -82,7 +84,7 @@
                 <p>{{ dinero(producto.precio) }}</p>
               </ion-label>
 
-              <ion-badge v-if="!producto.stock" color="warning">Sin stock</ion-badge>
+              <comp-estado :definicion="producto.stock ? ESTADOS_STOCK.disponible : ESTADOS_STOCK.sin_stock" />
 
               <template v-if="puede_gestionar">
                 <ion-button fill="clear" size="small" :disabled="guardando || seleccionando_foto || cargando_edicion" @click="editar(producto)">Editar</ion-button>
@@ -107,13 +109,16 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 import {
-  IonBadge, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle,
-  IonInput, IonItem, IonLabel, IonList, IonText, IonTextarea, IonThumbnail, IonToggle,
+  IonButton, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle,
+  IonInput, IonItem, IonLabel, IonList, IonTextarea, IonThumbnail, IonToggle,
   onIonViewDidLeave, onIonViewWillEnter,
 } from '@ionic/vue';
 
 import CompPage from '../components/base/comp-page.vue';
 import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompAviso from '../components/base/comp-aviso.vue';
+import CompEstado from '../components/base/comp-estado.vue';
+import { ESTADOS_STOCK } from '../config/estados';
 import CompProductoFoto from '../components/comp-producto-foto.vue';
 import { obtener_producto, obtener_productos, eliminar_producto as eliminar_producto_api, crear_producto, actualizar_producto, type Producto } from '../services/productos_service';
 import { obtener_foto, validar_foto } from '../services/camara_service';
@@ -289,6 +294,9 @@ async function guardar() {
     error_foto.value = validar_foto(foto_archivo.value);
     if (error_foto.value) return;
   }
+  if (!window.confirm(producto_editando_id.value
+    ? `¿Guardar los cambios de ${formulario.nombre.trim()}?`
+    : `¿Crear el producto ${formulario.nombre.trim()}?`)) return;
 
   const version = version_formulario;
   const producto = {

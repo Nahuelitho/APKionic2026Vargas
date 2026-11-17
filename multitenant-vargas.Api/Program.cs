@@ -81,6 +81,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ProductoFotoService>();
+builder.Services.AddSingleton<PushService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -143,6 +144,8 @@ builder.Environment.WebRootFileProvider = new Microsoft.Extensions.FileProviders
 var app = builder.Build();
 
 // Migraciones y sincronizacion del administrador de produccion al arrancar.
+// En "Testing" la base SQLite la crea el propio test con EnsureCreated.
+if (!app.Environment.IsEnvironment("Testing"))
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

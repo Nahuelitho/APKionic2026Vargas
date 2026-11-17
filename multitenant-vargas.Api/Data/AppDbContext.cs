@@ -14,6 +14,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<Dispositivo> Dispositivos => Set<Dispositivo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -45,7 +45,7 @@
         </ion-button>
 
         <ion-text v-if="mensaje" color="success"><p>{{ mensaje }}</p></ion-text>
-        <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
+        <comp-aviso v-if="error" tipo="peligro" :mensaje="error" />
       </ion-card-content>
     </ion-card>
   </div>
@@ -56,6 +56,7 @@ import { ref, watch } from 'vue';
 import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonIcon, IonInput, IonItem, IonText, IonToggle } from '@ionic/vue';
 import { locateOutline, mapOutline } from 'ionicons/icons';
 import { Browser } from '@capacitor/browser';
+import CompAviso from './base/comp-aviso.vue';
 import { actualizar_empresa, type Empresa } from '../services/empresas_service';
 import { formatear_coordenadas, obtener_ubicacion_actual, tiene_coordenadas, url_mapa } from '../services/geolocalizacion_service';
 

@@ -1,38 +1,33 @@
 <template>
   <comp-page titulo="Productos" :mostrar_actualizar="true" @actualizar="actualizar">
-    <ion-card>
-      <ion-card-header>
-        <ion-card-title>Elegí una empresa</ion-card-title>
-        <ion-card-subtitle>Los productos se muestran por empresa.</ion-card-subtitle>
-      </ion-card-header>
-      <ion-card-content>
-        <p>
-          Seleccioná una empresa para ver y gestionar sus productos.
-          <template v-if="!es_superadmin">
-            Solo vas a ver la empresa a la que pertenecés.
-          </template>
-        </p>
-      </ion-card-content>
-    </ion-card>
+    <section class="intro app-tarjeta">
+      <h1>Elegí una empresa</h1>
+      <p class="app-texto-suave">
+        Los productos se muestran por empresa.
+        <template v-if="!es_superadmin">Solo vas a ver la empresa a la que pertenecés.</template>
+      </p>
+    </section>
 
-    <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-    <ion-button v-if="error" fill="outline" @click="cargar">Reintentar</ion-button>
-
-    <comp-esqueleto v-if="cargando && !empresas.length" />
-    <p v-if="!cargando && !error && !empresas.length">No hay empresas disponibles para mostrar.</p>
-
-    <ion-list v-if="empresas.length">
-      <ion-item v-for="empresa in empresas" :key="empresa.id" button detail @click="ir_a_productos(empresa.id)">
-        <ion-icon slot="start" :icon="storefrontOutline" />
-        <ion-label class="ion-text-wrap">
-          <h2>{{ empresa.nombre_empresa }}</h2>
-          <p>{{ empresa.direccion_linea || 'Sin dirección cargada' }}</p>
-        </ion-label>
-        <ion-badge slot="end" :color="empresa.activo ? 'success' : 'medium'">
-          {{ empresa.activo ? 'Activa' : 'Inactiva' }}
-        </ion-badge>
-      </ion-item>
-    </ion-list>
+    <comp-lista
+      :cargando="cargando"
+      :error="error"
+      :items="empresas.length"
+      texto_vacio="No hay empresas disponibles para mostrar."
+      @reintentar="cargar"
+    >
+      <ion-list class="lista-empresas">
+        <ion-item v-for="empresa in empresas" :key="empresa.id" button detail @click="ir_a_productos(empresa.id)">
+          <ion-icon slot="start" :icon="storefrontOutline" class="icono-empresa" />
+          <ion-label class="ion-text-wrap">
+            <div class="empresa-titulo">
+              <h2>{{ empresa.nombre_empresa }}</h2>
+              <comp-estado :definicion="empresa.activo ? ESTADOS_ACTIVO.activo : ESTADOS_ACTIVO.inactivo" />
+            </div>
+            <p>{{ empresa.direccion_linea || 'Sin dirección cargada' }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </comp-lista>
   </comp-page>
 </template>
 
@@ -40,24 +35,18 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  IonBadge,
-  IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
   IonIcon,
   IonItem,
   IonLabel,
   IonList,
-  IonText,
   onIonViewWillEnter,
 } from '@ionic/vue';
 import { storefrontOutline } from 'ionicons/icons';
 
 import CompPage from '../components/base/comp-page.vue';
-import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompLista from '../components/base/comp-lista.vue';
+import CompEstado from '../components/base/comp-estado.vue';
+import { ESTADOS_ACTIVO } from '../config/estados';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 import { sesion } from '../services/auth_service';
 
@@ -99,3 +88,34 @@ async function actualizar(event: CustomEvent) {
 
 onIonViewWillEnter(cargar);
 </script>
+
+<style scoped>
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-espacio-1);
+  padding: var(--app-espacio-4);
+}
+
+.intro h1 { margin: 0; font-size: var(--app-texto-lg); font-weight: 800; }
+.intro p { margin: 0; }
+
+.lista-empresas {
+  margin: 0;
+  border-radius: var(--app-radio-md);
+  overflow: hidden;
+  border: 1px solid var(--app-borde);
+  box-shadow: var(--app-sombra-1);
+}
+
+.icono-empresa { color: var(--ion-color-primary); font-size: 24px; }
+
+.empresa-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--app-espacio-2);
+  flex-wrap: wrap;
+}
+
+.empresa-titulo h2 { margin: 0; font-size: var(--app-texto-md); font-weight: 700; }
+</style>

@@ -6,7 +6,7 @@ Aplicación móvil híbrida para la gestión de múltiples empresas (tiendas) ba
 
 - **Frontend:** [Vue 3](https://vuejs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Ionic Framework](https://ionicframework.com/)
 - **Nativo/Hybrid:** [Capacitor](https://capacitorjs.com/)
-- **Backend:** [ASP.NET Core 10](https://dotnet.microsoft.com/) Web API + Entity Framework Core
+- **Backend:** [ASP.NET Core 8](https://dotnet.microsoft.com/) Web API + Entity Framework Core 9
 - **Base de datos:** MySQL
 - **Notificaciones:** Firebase Cloud Messaging (FCM)
 - **Autenticación:** JWT (Access Token + Refresh Token)
@@ -17,9 +17,12 @@ Aplicación móvil híbrida para la gestión de múltiples empresas (tiendas) ba
 - **Roles y permisos:** `superadmin`, `administrador`, `vendedor`, `caja` y usuario sin rol
 - **Gestión completa:** Empresas, productos, clientes, pedidos y usuarios
 - **Notificaciones in-app:** Con polling y contador en la campanita
-- **Push Notifications:** Integración con Firebase (FCM)
+- **Push Notifications:** FCM con canal de importancia alta, ícono propio y deep link al pedido que cambió
+- **Tabla de teléfonos:** El token se registra al iniciar sesión y se borra al salir
+- **Diseño normalizado:** Tokens de radio, sombra, grises y tipografía; estados con texto, color e ícono
+- **Piezas reutilizables:** Avisos, esqueletos, listas con estados y hoja de detalle
 - **Catálogo por tiendas:** Para usuarios sin rol
-- **Listo para modo offline:** En preparación para Etapa 8
+- **Modo offline:** Cola de cambios de estado con sincronización al volver la red
 
 ## Estructura del proyecto
 
@@ -60,9 +63,15 @@ npx cap run android
 ## Configuración
 
 - `google-services.json` debe colocarse en `android/app/` (no versionado)
-- `android/keystore.properties` para firma de release (no versionado)
-- `.env` / `.env.release` para configuración de URLs (no versionados)
+- `android/keystore.properties` para firma de release (no versionado, va en `android/`)
+- `.env.release` define el modo de producción del APK (sin secretos)
+- La **cuenta de servicio de Firebase** va en User Secrets en desarrollo y en el panel del hosting en producción; **nunca** en el repositorio
+- Variables de la API: `ConnectionStrings__BaseDeDatos`, `Jwt__Key`, `Admin__Password`, `Cors__AllowedOrigins__0` y `Firebase__CredentialsJson` (o `Firebase__CredentialsPath`)
 - Ver `appsettings.json` en la API para configuración de base de datos
+
+## Documentación
+
+- [Guía U9](docs/GUIA_U9.md): cuenta de servicio, variables del hosting, endpoints de dispositivos, flujo de push, deep link, APK de release y matriz de pruebas.
 
 ## Roles de prueba
 
@@ -71,7 +80,8 @@ Consultar el archivo de migraciones o seed para usuarios de desarrollo.
 ## Estado
 
 - **Etapa 7:** Completada - Firebase FCM, notificaciones in-app/push, vistas corregidas
-- **Etapa 8:** En preparación - Modo offline con cola, firma APK, publicación API
+- **Etapa 8:** Completada - Modo offline con cola, firma APK, publicación API
+- **Etapa 9:** Completada - Normalización visual, piezas reutilizables, tabla de teléfonos, push con deep link y canal de importancia alta
 
 ## Licencia
 

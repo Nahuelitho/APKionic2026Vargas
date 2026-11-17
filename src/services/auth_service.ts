@@ -105,6 +105,9 @@ export async function restaurar_sesion(): Promise<boolean> {
 }
 
 export async function cerrar_sesion() {
+  // La baja del telefono va antes de revocar la sesion: el endpoint la valida.
+  const push = await import('./push_service').catch(() => null);
+  await push?.dar_de_baja_push();
   if (access_token) await fetch(`${obtener_api_url()}/api/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${access_token}` } }).catch(() => undefined);
   await limpiar_sesion();
 }

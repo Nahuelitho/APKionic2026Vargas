@@ -1,15 +1,18 @@
 <template>
   <comp-page titulo="Tiendas" :mostrar_actualizar="true" @actualizar="actualizar">
-    <div class="ion-padding">
+    <header class="comprar-cabecera">
       <h1>Elegí tu tienda</h1>
-      <p>Elegí una tienda para ver sus productos y preparar tu pedido.</p>
+      <p class="app-texto-suave">Elegí una tienda para ver sus productos y preparar tu pedido.</p>
+    </header>
 
-      <comp-esqueleto v-if="cargando && !empresas.length" />
-      <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-      <ion-button v-if="error" fill="outline" @click="cargar">Reintentar</ion-button>
-      <p v-if="!cargando && !error && !empresas.length">No hay tiendas disponibles por el momento.</p>
-
-      <div v-if="empresas.length" class="grid-empresas">
+    <comp-lista
+      :cargando="cargando"
+      :error="error"
+      :items="empresas.length"
+      texto_vacio="No hay tiendas disponibles por el momento."
+      @reintentar="cargar"
+    >
+      <div class="grid-empresas">
         <ion-card v-for="empresa in empresas" :key="empresa.id" class="card-empresa">
           <ion-card-header class="card-cabecera">
             <ion-icon :icon="storefrontOutline" />
@@ -49,17 +52,17 @@
           </div>
         </ion-card>
       </div>
-    </div>
+    </comp-lista>
   </comp-page>
 </template>
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue';
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonIcon, IonText, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonIcon, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import { informationCircleOutline, locationOutline, mapOutline, navigateOutline, storefrontOutline } from 'ionicons/icons';
 import { Browser } from '@capacitor/browser';
 import CompPage from '../components/base/comp-page.vue';
-import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompLista from '../components/base/comp-lista.vue';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 import { formatear_coordenadas, tiene_coordenadas, url_mapa } from '../services/geolocalizacion_service';
 
@@ -98,6 +101,9 @@ onBeforeUnmount(salir);
 </script>
 
 <style scoped>
+.comprar-cabecera h1 { margin: 0; font-size: var(--app-texto-xl); font-weight: 800; color: var(--app-texto); }
+.comprar-cabecera p { margin: 2px 0 var(--app-espacio-2); }
+
 /* Cards grandes: en el celular entran de a una, en tablet o PC se ponen al lado.
    auto-fill + minmax hace que bajen solas a la fila siguiente cuando no entra otra. */
 .grid-empresas {

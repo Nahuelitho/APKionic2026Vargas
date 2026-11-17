@@ -15,7 +15,7 @@ namespace multitenant_vargas.Api.Controllers;
 [ApiController]
 [Route("api/pedidos")]
 [Authorize]
-public sealed class PedidosController(AppDbContext db, ILogger<PedidosController> logger) : ControllerBase
+public sealed class PedidosController(AppDbContext db, PushService push, ILogger<PedidosController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Listar(CancellationToken ct)
@@ -207,6 +207,11 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
 
             if (destinatarios.Count > 0) await db.SaveChangesAsync(ct);
             logger.LogInformation("Pedido {PedidoId}: {Cantidad} notificaciones creadas.", pedido.Id, destinatarios.Count);
+
+            // Si el aviso entro a la bandeja, tambien sale como push.
+            await EnviarPushAsync(destinatarios, "Nuevo pedido",
+                $"PED-{pedido.Id:D4}: {pedido.Cliente} pidio por {pedido.Total.ToString("C2", CultureInfo.GetCultureInfo("es-AR"))}.",
+                pedido.Id, ct);
         }
         catch (Exception ex)
         {
@@ -232,6 +237,9 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
                 Fecha = DateTime.UtcNow,
             });
             await db.SaveChangesAsync(ct);
+            await EnviarPushAsync([pedido.UsuarioId], "Tu pedido cambio de estado",
+                $"PED-{pedido.Id:D4}: {pedido.Empresa.NombreEmpresa} marco el pedido como {pedido.Estado}.",
+                pedido.Id, ct);
         }
         catch (Exception ex)
         {
@@ -243,6 +251,31 @@ public sealed class PedidosController(AppDbContext db, ILogger<PedidosController
     {
         codigo = "pedido_no_encontrado", mensaje = "No se encontro el pedido."
     });
+
+    /// <summary>
+    /// Envia la push a los telefonos de los destinatarios. Un fallo de
+    /// Firebase nunca debe romper el pedido ni la notificacion in-app.
+    /// </summary>
+    private async Task EnviarPushAsync(
+        IReadOnlyCollection<long> usuarios, string titulo, string mensaje, long pedidoId, CancellationToken ct)
+    {
+        try
+        {
+            var ids = usuarios.Distinct().ToArray();
+            if (ids.Length == 0) return;
+            var tokens = await db.Dispositivos.AsNoTracking()
+                .Where(x => ids.Contains(x.UsuarioId))
+                .Select(x => x.Token)
+                .ToListAsync(ct);
+            var invalidos = await push.EnviarAsync(tokens, titulo, mensaje, pedidoId, ct);
+            if (invalidos.Count > 0)
+                await db.Dispositivos.Where(x => invalidos.Contains(x.Token)).ExecuteDeleteAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "No se pudo enviar la push del pedido {PedidoId}.", pedidoId);
+        }
+    }
 
     private static byte[] GenerarQr(long id)
     {

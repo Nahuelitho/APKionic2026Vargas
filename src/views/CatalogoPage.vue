@@ -1,11 +1,13 @@
 <template>
   <comp-page :titulo="empresa ? `Catalogo: ${empresa.nombre_empresa}` : 'Catalogo'">
     <ion-button fill="outline" router-link="/app/comprar">Volver a elegir empresa</ion-button>
-    <p v-if="cargando">Validando empresa...</p>
-    <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-    <ion-button v-if="error" fill="outline" @click="cargar_empresa">Reintentar</ion-button>
+    <comp-esqueleto v-if="cargando" :filas="2" />
+    <comp-aviso v-if="error" tipo="peligro" :mensaje="error" accion="Reintentar" @accion="cargar_empresa" />
     <template v-if="activo && empresa">
-      <h1>{{ empresa.nombre_empresa }}</h1>
+      <div class="catalogo-cabecera">
+        <h1>{{ empresa.nombre_empresa }}</h1>
+        <p class="app-texto-suave">{{ empresa.direccion_linea || 'Sin dirección cargada' }}</p>
+      </div>
       <comp-pedido-formulario :key="empresa.id" :empresa="empresa" @creado="pedido_creado" />
     </template>
   </comp-page>
@@ -14,8 +16,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { IonButton, IonText, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
+import { IonButton, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import CompPage from '../components/base/comp-page.vue';
+import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompAviso from '../components/base/comp-aviso.vue';
 import CompPedidoFormulario from '../components/comp-pedido-formulario.vue';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 
@@ -47,3 +51,8 @@ onIonViewWillEnter(() => { activo.value = true; void cargar_empresa(); });
 onIonViewWillLeave(salir);
 onBeforeUnmount(salir);
 </script>
+
+<style scoped>
+.catalogo-cabecera h1 { margin: 0; font-size: var(--app-texto-xl); font-weight: 800; }
+.catalogo-cabecera p { margin: 2px 0 var(--app-espacio-2); }
+</style>

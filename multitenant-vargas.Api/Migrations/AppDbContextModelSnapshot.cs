@@ -22,6 +22,52 @@ namespace multitenant_vargas.Api.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Dispositivo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Plataforma")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("plataforma");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("token");
+
+                    b.Property<long>("UsuarioId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_dispositivos");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("ix_dispositivos_token");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_dispositivos_usuario_id");
+
+                    b.ToTable("dispositivos", (string)null);
+                });
+
             modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Empresa", b =>
                 {
                     b.Property<long>("Id")
@@ -531,6 +577,18 @@ namespace multitenant_vargas.Api.Migrations
                         {
                             t.HasCheckConstraint("ck_usuario_roles_ambito", "(rol_id = 4 AND empresa_id IS NULL) OR (rol_id IN (1, 2, 3) AND empresa_id IS NOT NULL)");
                         });
+                });
+
+            modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Dispositivo", b =>
+                {
+                    b.HasOne("multitenant_vargas.Api.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_dispositivos_usuarios_usuario_id");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("multitenant_vargas.Api.Domain.Entities.Notificacion", b =>

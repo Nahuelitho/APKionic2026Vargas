@@ -3,8 +3,7 @@
     <ion-button fill="outline" router-link="/app/empresas">Volver a empresas</ion-button>
 
     <comp-esqueleto v-if="cargando && !empresa" />
-    <ion-text v-if="error" color="danger"><p role="alert">{{ error }}</p></ion-text>
-    <ion-button v-if="error" fill="outline" @click="cargar">Reintentar</ion-button>
+    <comp-aviso v-if="error" tipo="peligro" :mensaje="error" accion="Reintentar" @accion="cargar" />
 
     <comp-empresa-editor v-if="empresa" :empresa="empresa" mostrar_activo @guardado="cargar" />
   </comp-page>
@@ -13,9 +12,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { IonButton, IonText, onIonViewWillEnter } from '@ionic/vue';
+import { IonButton, onIonViewWillEnter } from '@ionic/vue';
 import CompPage from '../components/base/comp-page.vue';
 import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompAviso from '../components/base/comp-aviso.vue';
 import CompEmpresaEditor from '../components/comp-empresa-editor.vue';
 import { obtener_empresas, type Empresa } from '../services/empresas_service';
 

@@ -1,69 +1,148 @@
 <template>
-  <comp-page :titulo="sesion.usuario.value?.rol ? 'Pedidos' : 'Mis pedidos'" :mostrar_actualizar="true" @actualizar="actualizar">
-    <ion-note v-if="offline.sin_conexion.value" color="warning">
-      Sin conexión: estás viendo los datos guardados. Podés cambiar el estado de un pedido;
-      se envía solo cuando vuelva la red.
-    </ion-note>
+  <comp-page
+    :titulo="sesion.usuario.value?.rol ? 'Pedidos' : 'Mis pedidos'"
+    :mostrar_actualizar="true"
+    :aviso_offline="sesion.usuario.value?.rol
+      ? 'Estás viendo los pedidos guardados. Podés cambiar el estado; el cambio se envía solo cuando vuelva la red.'
+      : 'Estás viendo tus pedidos guardados. Cuando vuelva la red se actualizan solos.'"
+    @actualizar="actualizar"
+  >
+    <header class="encabezado">
+      <div>
+        <h1>{{ sesion.usuario.value?.rol ? 'Pedidos' : 'Mis pedidos' }}</h1>
+        <p class="app-texto-suave">{{ resumen }}</p>
+      </div>
+      <ion-button v-if="sesion.usuario.value && !sesion.usuario.value.rol" fill="outline" router-link="/app/comprar">
+        Elegir empresa
+      </ion-button>
+    </header>
 
-    <ion-card v-if="!offline.sin_conexion.value">
-      <ion-card-content>
-        <div class="acciones">
-          <ion-button v-if="es_nativo" :disabled="escaneando" @click="escanear">{{ escaneando ? 'Preparando escaner...' : 'Escanear QR' }}</ion-button>
-          <ion-input v-model="codigo" label="Codigo de pedido" label-placement="stacked" placeholder="PED-0007" @keyup.enter="abrir_codigo" />
-          <ion-button fill="outline" :disabled="escaneando || !codigo" @click="abrir_codigo">Abrir codigo</ion-button>
-        </div>
-        <ion-text v-if="error_codigo" color="danger"><p role="alert">{{ error_codigo }}</p></ion-text>
-      </ion-card-content>
-    </ion-card>
+    <!-- Buscador por codigo: presente solo con red porque el QR y el pedido viven en la API. -->
+    <section v-if="!offline.sin_conexion.value" class="buscador app-tarjeta">
+      <ion-input
+        v-model="codigo"
+        label="Código de pedido"
+        label-placement="stacked"
+        placeholder="PED-0007"
+        helper-text="El código figura en el comprobante y en la notificación."
+        @keyup.enter="abrir_codigo"
+      />
+      <div class="app-acciones">
+        <ion-button fill="outline" :disabled="!codigo.trim()" @click="abrir_codigo">Abrir código</ion-button>
+        <ion-button v-if="es_nativo" fill="clear" :disabled="escaneando" @click="escanear">
+          <ion-icon slot="start" :icon="qrCodeOutline" />
+          {{ escaneando ? 'Preparando escáner...' : 'Escanear QR' }}
+        </ion-button>
+      </div>
+      <comp-aviso v-if="error_codigo" tipo="peligro" :mensaje="error_codigo" />
+    </section>
 
-    <ion-button v-if="sesion.usuario.value && !sesion.usuario.value.rol" router-link="/app/comprar">Elegir empresa</ion-button>
     <comp-pedido-formulario v-if="activo && puede_crear && !offline.sin_conexion.value" @creado="pedido_creado" />
 
-    <ion-card v-if="detalle_id">
-      <ion-card-header><ion-card-title>{{ codigo_pedido(detalle_id) }}</ion-card-title></ion-card-header>
-      <ion-card-content>
-        <ion-button fill="clear" @click="cerrar_detalle">Cerrar detalle</ion-button>
-        <p v-if="cargando_detalle">Cargando detalle...</p>
-        <ion-text v-if="error_detalle" color="danger"><p role="alert">{{ error_detalle }}</p></ion-text>
-        <ion-button v-if="error_detalle" fill="outline" :disabled="cambiando" @click="abrir_detalle(detalle_id)">Recargar detalle</ion-button>
-        <template v-if="detalle">
-          <h2>{{ detalle.cliente }}</h2>
-          <p>{{ detalle.nombre_empresa }}</p>
-          <p>{{ fecha(detalle.fecha) }}</p>
-          <ion-badge v-if="detalle.sin_enviar" color="warning">Sin enviar</ion-badge>
-          <ion-badge :color="color_estado(detalle.estado)">{{ detalle.estado }}</ion-badge>
-          <ion-list>
-            <ion-item v-for="item in detalle.items" :key="item.id">
-              <ion-label class="ion-text-wrap"><h3>{{ item.nombre }}</h3><p>{{ item.cantidad }} x {{ dinero(item.precioUnitario) }}</p><p>{{ dinero(item.subtotal) }}</p></ion-label>
-            </ion-item>
-          </ion-list>
-          <p><strong>Total: {{ dinero(detalle.total) }}</strong></p>
-          <div v-if="puede_estado && detalle.estado === 'En preparacion'" class="acciones">
-            <ion-button :disabled="cambiando" @click="cambiar_estado('Listo')">Marcar Listo</ion-button>
-            <ion-button color="danger" fill="outline" :disabled="cambiando" @click="cambiar_estado('Cancelado')">Cancelar pedido</ion-button>
-          </div>
-          <div v-if="!offline.sin_conexion.value" class="acciones">
-            <ion-button fill="outline" :disabled="cargando_qr" @click="mostrar_qr">{{ cargando_qr ? 'Cargando QR...' : 'Ver QR' }}</ion-button>
-            <ion-button v-if="puede_pdf && detalle.estado === 'Listo'" :disabled="compartiendo" @click="compartir">{{ compartiendo ? 'Obteniendo PDF...' : es_nativo ? 'Compartir PDF' : 'Descargar PDF' }}</ion-button>
-          </div>
-          <img v-if="qr_url && !offline.sin_conexion.value" class="qr" :src="qr_url" :alt="`QR de ${codigo_pedido(detalle.id)}`" />
-          <ion-button v-if="(qr_url || cargando_qr) && !offline.sin_conexion.value" fill="clear" @click="ocultar_qr">Ocultar QR</ion-button>
-          <ion-text v-if="error_archivo" color="danger"><p role="alert">{{ error_archivo }}</p></ion-text>
-        </template>
-      </ion-card-content>
-    </ion-card>
+    <comp-lista
+      :cargando="cargando"
+      :error="error_lista"
+      :items="pedidos.length"
+      :texto_vacio="sesion.usuario.value?.rol
+        ? 'No hay pedidos cargados todavía. Cuando se cree uno aparece acá.'
+        : 'Todavía no hiciste pedidos. Elegí una tienda para empezar.'"
+      :filas_esqueleto="6"
+      @reintentar="cargar"
+    >
+      <ion-list class="lista-pedidos">
+        <ion-item
+          v-for="pedido in pedidos"
+          :key="pedido.id"
+          button
+          detail
+          class="pedido"
+          @click="abrir_detalle(pedido.id)"
+        >
+          <ion-label class="ion-text-wrap">
+            <div class="pedido-titulo">
+              <h2>{{ codigo_pedido(pedido.id) }}</h2>
+              <comp-estado v-if="pedido.sin_enviar" :sin_enviar="true" />
+              <comp-estado v-else :estado="pedido.estado" />
+            </div>
+            <p>{{ pedido.cliente }} · {{ pedido.nombre_empresa }}</p>
+            <p class="pedido-fecha">{{ fecha(pedido.fecha) }}</p>
+            <p class="pedido-total">{{ dinero(pedido.total) }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </comp-lista>
 
-    <ion-text v-if="error_lista" color="danger"><p role="alert">{{ error_lista }}</p></ion-text>
-    <ion-button v-if="error_lista" fill="outline" @click="cargar">Reintentar pedidos</ion-button>
-    <comp-esqueleto v-if="cargando && !pedidos.length" />
-    <p v-else-if="!pedidos.length && !error_lista">No hay pedidos cargados.</p>
-    <ion-list v-else>
-      <ion-item v-for="pedido in pedidos" :key="pedido.id" button :detail="true" @click="abrir_detalle(pedido.id)">
-        <ion-label class="ion-text-wrap"><h3>{{ codigo_pedido(pedido.id) }} · {{ pedido.cliente }}</h3><p>{{ pedido.nombre_empresa }}</p><p>{{ fecha(pedido.fecha) }}</p><p>{{ dinero(pedido.total) }}</p></ion-label>
-        <ion-badge v-if="pedido.sin_enviar" color="warning">Sin enviar</ion-badge>
-        <ion-badge :color="color_estado(pedido.estado)">{{ pedido.estado }}</ion-badge>
-      </ion-item>
-    </ion-list>
+    <!-- Hoja de detalle: se abre desde abajo y se cierra con el gesto o el boton. -->
+    <comp-detalle-hoja
+      :abierto="detalle_id !== null"
+      :titulo="detalle_id ? codigo_pedido(detalle_id) : 'Detalle del pedido'"
+      :cargando="cargando_detalle"
+      @cerrar="cerrar_detalle"
+    >
+      <comp-aviso
+        v-if="error_detalle"
+        tipo="peligro"
+        titulo="No se pudo cargar el detalle"
+        :mensaje="error_detalle"
+        accion="Recargar"
+        :accion_deshabilitada="cambiando"
+        @accion="detalle_id && abrir_detalle(detalle_id)"
+      />
+
+      <comp-esqueleto v-if="!detalle && cargando_detalle" variante="detalle" :filas="3" />
+
+      <template v-if="detalle">
+        <header class="detalle-cabecera">
+          <h2>{{ detalle.cliente }}</h2>
+          <p class="app-texto-suave">{{ detalle.nombre_empresa }} · {{ fecha(detalle.fecha) }}</p>
+          <div class="app-acciones">
+            <comp-estado v-if="detalle.sin_enviar" :sin_enviar="true" />
+            <comp-estado v-else :estado="detalle.estado" />
+          </div>
+        </header>
+
+        <ion-list class="detalle-items">
+          <ion-item v-for="item in detalle.items" :key="item.id">
+            <ion-label class="ion-text-wrap">
+              <h3>{{ item.nombre }}</h3>
+              <p>{{ item.cantidad }} × {{ dinero(item.precioUnitario) }}</p>
+            </ion-label>
+            <ion-note slot="end" class="subtotal">{{ dinero(item.subtotal) }}</ion-note>
+          </ion-item>
+        </ion-list>
+
+        <div class="total">
+          <span>Total</span>
+          <strong>{{ dinero(detalle.total) }}</strong>
+        </div>
+
+        <comp-aviso v-if="error_archivo" tipo="peligro" :mensaje="error_archivo" />
+
+        <div v-if="!offline.sin_conexion.value" class="app-acciones archivos">
+          <ion-button fill="outline" :disabled="cargando_qr" @click="mostrar_qr">
+            <ion-icon slot="start" :icon="qrCodeOutline" />
+            {{ cargando_qr ? 'Cargando QR...' : qr_url ? 'Ocultar QR' : 'Ver QR' }}
+          </ion-button>
+          <ion-button v-if="puede_pdf && detalle.estado === 'Listo'" fill="outline" :disabled="compartiendo" @click="compartir">
+            <ion-icon slot="start" :icon="documentTextOutline" />
+            {{ compartiendo ? 'Obteniendo PDF...' : es_nativo ? 'Compartir PDF' : 'Descargar PDF' }}
+          </ion-button>
+        </div>
+
+        <img v-if="qr_url && !offline.sin_conexion.value" class="qr" :src="qr_url" :alt="`QR de ${codigo_pedido(detalle.id)}`" />
+      </template>
+
+      <template v-if="puede_estado && detalle?.estado === 'En preparacion'" #pie>
+        <div class="pie-acciones">
+          <ion-button expand="block" :disabled="cambiando" @click="cambiar_estado('Listo')">
+            {{ cambiando ? 'Guardando...' : 'Marcar listo' }}
+          </ion-button>
+          <ion-button expand="block" color="danger" fill="outline" :disabled="cambiando" @click="cambiar_estado('Cancelado')">
+            Cancelar pedido
+          </ion-button>
+        </div>
+      </template>
+    </comp-detalle-hoja>
   </comp-page>
 </template>
 
@@ -71,9 +150,24 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
-import { IonBadge, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonList, IonNote, IonText, onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
+import {
+  IonButton,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonNote,
+  onIonViewWillEnter,
+  onIonViewWillLeave,
+} from '@ionic/vue';
+import { documentTextOutline, qrCodeOutline } from 'ionicons/icons';
 import CompPage from '../components/base/comp-page.vue';
+import CompLista from '../components/base/comp-lista.vue';
 import CompEsqueleto from '../components/base/comp-esqueleto.vue';
+import CompEstado from '../components/base/comp-estado.vue';
+import CompAviso from '../components/base/comp-aviso.vue';
+import CompDetalleHoja from '../components/base/comp-detalle-hoja.vue';
 import CompPedidoFormulario from '../components/comp-pedido-formulario.vue';
 import { sesion } from '../services/auth_service';
 import { obtener_pedidos, obtener_pedido, cambiar_estado_pedido, obtener_qr_pedido, obtener_comprobante_pedido, codigo_pedido, parsear_codigo_pedido, type Pedido, type PedidoDetalle, type EstadoPedido } from '../services/pedidos_service';
@@ -96,8 +190,16 @@ const error_lista = ref(''), error_detalle = ref(''), error_codigo = ref(''), er
 let lista_version = 0, detalle_version = 0, qr_version = 0;
 let vida = new AbortController(), archivo = new AbortController();
 const dinero = (valor: number) => Number.isFinite(valor) ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(valor) : 'Cantidad invalida';
-const fecha = (valor: string) => new Date(valor).toLocaleString('es-AR');
-const color_estado = (estado: EstadoPedido) => estado === 'Listo' ? 'success' : estado === 'Cancelado' ? 'danger' : 'warning';
+const fecha = (valor: string) => new Date(valor).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+
+const resumen = computed(() => {
+  if (cargando.value && pedidos.value.length === 0) return 'Cargando pedidos...';
+  if (pedidos.value.length === 0) return 'Sin pedidos por ahora';
+  const en_preparacion = pedidos.value.filter(p => p.estado === 'En preparacion').length;
+  const listos = pedidos.value.filter(p => p.estado === 'Listo').length;
+  return `${pedidos.value.length} pedido${pedidos.value.length === 1 ? '' : 's'} · ${en_preparacion} en preparación · ${listos} listo${listos === 1 ? '' : 's'}`;
+});
+
 function mensaje(error: unknown) {
   if (error && typeof error === 'object' && 'mensaje' in error) return String(error.mensaje);
   return error instanceof Error ? error.message : 'No se pudo completar la operacion.';
@@ -165,10 +267,18 @@ async function escanear() {
   catch (error) { if (!signal.aborted && version === detalle_version) error_codigo.value = mensaje(error); }
   finally { escaneando.value = false; }
 }
+
+function confirmar_cambio(estado: EstadoPedido) {
+  const pregunta = estado === 'Cancelado'
+    ? '¿Cancelar este pedido? Esta acción no se puede deshacer.'
+    : '¿Marcar el pedido como Listo? Después ya no se puede modificar.';
+  return window.confirm(pregunta);
+}
+
 async function cambiar_estado(estado: EstadoPedido) {
   const actual = detalle.value;
   if (!actual || cambiando.value || !puede_estado.value || actual.estado !== 'En preparacion') return;
-  if (estado === 'Cancelado' && !window.confirm('Cancelar este pedido? Esta accion no se puede deshacer.')) return;
+  if (!confirmar_cambio(estado)) return;
 
   // Sin red el cambio no sale: espera en la cola y se dibuja con el estado nuevo.
   if (offline.sin_conexion.value) {
@@ -189,13 +299,13 @@ async function cambiar_estado(estado: EstadoPedido) {
   } catch (error) {
     if (version !== detalle_version) return;
     error_detalle.value = mensaje(error);
-    // Reload after a concurrency conflict without hiding the original error.
-    try { const respuesta = await obtener_pedido(actual.id); if (version === detalle_version) detalle.value = respuesta; } catch { /* Keep retry available. */ }
+    // Se recarga para mostrar el estado real sin borrar el mensaje de error.
+    try { const respuesta = await obtener_pedido(actual.id); if (version === detalle_version) detalle.value = respuesta; } catch { /* Queda disponible reintentar. */ }
   } finally { if (version === detalle_version) cambiando.value = false; }
 }
 async function mostrar_qr() {
   if (!detalle.value || cargando_qr.value) return;
-  ocultar_qr();
+  if (qr_url.value) { ocultar_qr(); return; }
   const version = qr_version, id = detalle.value.id;
   cargando_qr.value = true; error_archivo.value = '';
   try {
@@ -235,10 +345,79 @@ onBeforeUnmount(salir);
 </script>
 
 <style scoped>
-.acciones { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.acciones ion-input { flex: 1 1 180px; }
-.qr { display: block; width: min(100%, 280px); height: auto; margin: 16px auto; }
-@media (max-width: 600px) {
-  ion-item ion-badge { max-width: 110px; white-space: normal; text-align: center; }
+.encabezado {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--app-espacio-3);
+  flex-wrap: wrap;
 }
+
+.encabezado h1 {
+  margin: 0;
+  font-size: var(--app-texto-xl);
+  font-weight: 800;
+  color: var(--app-texto);
+}
+
+.encabezado p { margin: 2px 0 0; }
+
+.buscador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-espacio-3);
+  padding: var(--app-espacio-4);
+}
+
+.lista-pedidos {
+  margin: 0;
+  border-radius: var(--app-radio-md);
+  overflow: hidden;
+  border: 1px solid var(--app-borde);
+  box-shadow: var(--app-sombra-1);
+}
+
+.pedido { --padding-start: var(--app-espacio-3); --inner-padding-end: var(--app-espacio-3); }
+
+.pedido-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-espacio-2);
+  flex-wrap: wrap;
+}
+
+.pedido-titulo h2 { margin: 0; font-size: var(--app-texto-md); font-weight: 700; }
+.pedido-fecha { color: var(--app-texto-suave); font-size: var(--app-texto-xs); }
+.pedido-total { font-weight: 700; color: var(--app-texto); }
+
+.detalle-cabecera { display: flex; flex-direction: column; gap: var(--app-espacio-1); margin-bottom: var(--app-espacio-4); }
+.detalle-cabecera h2 { margin: 0; font-size: var(--app-texto-lg); }
+.detalle-cabecera p { margin: 0; }
+
+.detalle-items {
+  margin: 0;
+  border: 1px solid var(--app-borde);
+  border-radius: var(--app-radio-sm);
+  overflow: hidden;
+}
+
+.subtotal { font-weight: 600; }
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--app-espacio-3) var(--app-espacio-1);
+  font-size: var(--app-texto-lg);
+}
+
+.total strong { font-size: var(--app-texto-xl); }
+
+.archivos { margin-top: var(--app-espacio-3); }
+
+.qr { display: block; width: min(100%, 260px); height: auto; margin: var(--app-espacio-4) auto; }
+
+.pie-acciones { display: flex; flex-direction: column; gap: var(--app-espacio-2); padding: var(--app-espacio-2); }
+.pie-acciones ion-button { margin: 0; }
 </style>
