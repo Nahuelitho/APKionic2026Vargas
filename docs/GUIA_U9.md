@@ -111,7 +111,7 @@ Firebase__ProjectId       = tu-proyecto-firebase
 | `Jwt__Key` | Sí | Mínimo 32 caracteres. Fuera de Development la API no arranca sin ella. |
 | `Jwt__Issuer` | Sí | `TuTiendaCerca` |
 | `Jwt__Audience` | Sí | `TuTiendaCercaApp` |
-| `Admin__Password` | Sí | Mínimo 8 caracteres. |
+| `Admin__Password` | No | Opcional. Si se configura (mínimo 8 caracteres), reemplaza la clave de `admin@vargas.com` al arrancar. Si no, se conserva la clave que ya tiene la base (`Admin123!` del seed). |
 | `Cors__AllowedOrigins__0` | Recomendada | Origen permitido, por ejemplo `https://tu-frontend.com`. |
 | `Firebase__ProjectId` | Para push | ID del proyecto Firebase. |
 | `Firebase__CredentialsPath` o `Firebase__CredentialsJson` | Para push | Ver sección 2. |
@@ -350,7 +350,7 @@ Mostrar que las pantallas usan datos reales de la API: pedidos con código `PED-
 ## 11. Checklist de entrega
 
 - [ ] Cuenta de servicio fuera del repositorio (User Secrets en local, variable/secret file en producción).
-- [ ] API publicada con `ConnectionStrings__BaseDeDatos`, `Jwt__Key`, `Admin__Password` y `Firebase__*`.
+- [ ] API publicada con `ConnectionStrings__BaseDeDatos`, `Jwt__Key` y `Firebase__*` (`Admin__Password` es opcional).
 - [ ] Migración `DispositivosPush` aplicada (tabla `dispositivos`).
 - [ ] APK de release firmado e instalado en el teléfono físico.
 - [ ] Video: app abierta desde el ícono, datos reales del dominio.

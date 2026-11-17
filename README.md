@@ -66,7 +66,7 @@ npx cap run android
 - `android/keystore.properties` para firma de release (no versionado, va en `android/`)
 - `.env.release` define el modo de producción del APK (sin secretos)
 - La **cuenta de servicio de Firebase** va en User Secrets en desarrollo y en el panel del hosting en producción; **nunca** en el repositorio
-- Variables de la API: `ConnectionStrings__BaseDeDatos`, `Jwt__Key`, `Admin__Password`, `Cors__AllowedOrigins__0` y `Firebase__CredentialsJson` (o `Firebase__CredentialsPath`)
+- Variables de la API: `ConnectionStrings__BaseDeDatos`, `Jwt__Key`, `Cors__AllowedOrigins__0` y `Firebase__CredentialsJson` (o `Firebase__CredentialsPath`). `Admin__Password` es opcional y solo sirve para cambiar la clave del administrador al arrancar.
 - Ver `appsettings.json` en la API para configuración de base de datos
 
 ## Documentación

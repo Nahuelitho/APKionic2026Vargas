@@ -28,14 +28,10 @@ if (!builder.Environment.IsDevelopment() && (string.IsNullOrWhiteSpace(jwtKey) |
         "Configurala en las variables de entorno del hosting (Jwt__Key).");
 }
 
-// El administrador de produccion no puede conservar la clave publica del taller.
+// La clave del administrador es OPCIONAL: si no se configura, se conserva la
+// que ya tiene la base (por ejemplo Admin123! del seed). Si se configura,
+// reemplaza la clave del administrador al arrancar.
 var adminPassword = builder.Configuration["Admin:Password"] ?? string.Empty;
-if (adminPassword.Length < 8 && !builder.Environment.IsDevelopment())
-{
-    throw new InvalidOperationException(
-        "No se configuro Admin:Password, o tiene menos de 8 caracteres. " +
-        "Configurala en las variables de entorno del hosting (Admin__Password).");
-}
 
 // Los origenes CORS salen de configuracion. Nunca se hardcodea una IP local.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -151,7 +147,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
-    // En produccion, la clave del panel reemplaza a la del taller.
+    // Si Admin:Password esta configurada, reemplaza la clave del administrador.
+    // Si no, se conserva la que ya esta guardada en la base.
     if (adminPassword.Length >= 8)
     {
         var admin = await db.Usuarios.FirstOrDefaultAsync(x => x.Email == "admin@vargas.com");
@@ -161,6 +158,10 @@ using (var scope = app.Services.CreateScope())
             admin.PasswordHash = PasswordService.Hash(adminPassword);
             await db.SaveChangesAsync();
         }
+    }
+    else
+    {
+        app.Logger.LogInformation("Admin:Password no configurada; se conserva la clave actual del administrador.");
     }
 }
 
