@@ -146,7 +146,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-
+    await SeedData.CorrerAsync(db);
     // Si Admin:Password esta configurada, reemplaza la clave del administrador.
     // Si no, se conserva la que ya esta guardada en la base.
     if (adminPassword.Length >= 8)
