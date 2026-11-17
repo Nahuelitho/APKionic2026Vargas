@@ -46,6 +46,7 @@
           <p>admin@vargas.com · Admin123!</p>
           <p>vendedor@vargas.com · Vendedor123!</p>
           <p>sinrol@vargas.com · SinRol123!</p>
+          <p>superadmin@vargas.com · SuperAdmin123!</p>
         </details>
       </div>
     </ion-content>

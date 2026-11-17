@@ -536,6 +536,15 @@ namespace multitenant_vargas.Api.Migrations
                             Email = "sinrol@vargas.com",
                             Nombre = "Usuario sin rol",
                             PasswordHash = "jFW4Vo0rXf8AyFaYIHA8tA==.eRjLsnfog9iFPU5DRCiI33vL3gCZY/U7+LtIOoVEYzI="
+                        },
+                        new
+                        {
+                            Id = 9L,
+                            Activo = true,
+                            Email = "superadmin@vargas.com",
+                            Nombre = "Superadmin",
+                            PasswordHash = "wmucZlygLRQkEjd2avm1Hg==.KzdxfKP9IcqlweQErG1WHvK4U32Zy2PjxEmW5WrNo58=",
+                            RolId = 4L
                         });
                 });
 
@@ -576,6 +585,14 @@ namespace multitenant_vargas.Api.Migrations
                     b.ToTable("usuario_roles", null, t =>
                         {
                             t.HasCheckConstraint("ck_usuario_roles_ambito", "(rol_id = 4 AND empresa_id IS NULL) OR (rol_id IN (1, 2, 3) AND empresa_id IS NOT NULL)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 9L,
+                            RolId = 4L,
+                            UsuarioId = 9L
                         });
                 });
 

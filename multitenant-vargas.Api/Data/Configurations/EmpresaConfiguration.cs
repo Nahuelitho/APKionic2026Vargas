@@ -31,5 +31,8 @@ public sealed class UsuarioRolConfiguration : IEntityTypeConfiguration<UsuarioRo
         builder.HasOne(x => x.Usuario).WithMany(x => x.UsuarioRoles).HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Rol).WithMany().HasForeignKey(x => x.RolId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
+
+        // Membresia global del superadmin: rol 4 sin empresa.
+        builder.HasData(new UsuarioRol { Id = 9, UsuarioId = 9, RolId = 4, EmpresaId = null });
     }
 }

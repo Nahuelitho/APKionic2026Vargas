@@ -75,7 +75,12 @@ npx cap run android
 
 ## Roles de prueba
 
-Consultar el archivo de migraciones o seed para usuarios de desarrollo.
+| Email | Contraseña | Rol |
+| --- | --- | --- |
+| `admin@vargas.com` | `Admin123!` | Administrador de Vargas |
+| `vendedor@vargas.com` | `Vendedor123!` | Vendedor de Vargas |
+| `sinrol@vargas.com` | `SinRol123!` | Usuario sin rol |
+| `superadmin@vargas.com` | `SuperAdmin123!` | Superadmin global (todas las empresas) |
 
 ## Estado
 

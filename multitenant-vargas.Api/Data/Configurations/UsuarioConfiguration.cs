@@ -20,7 +20,10 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.HasData(
             new Usuario { Id = 1, Nombre = "Administrador", Email = "admin@vargas.com", PasswordHash = PasswordService.HashDeterministico("Admin123!", "admin-vargas"), RolId = 1, Activo = true },
             new Usuario { Id = 2, Nombre = "Vendedor", Email = "vendedor@vargas.com", PasswordHash = PasswordService.HashDeterministico("Vendedor123!", "vendedor-vargas"), RolId = 2, Activo = true },
-            new Usuario { Id = 3, Nombre = "Usuario sin rol", Email = "sinrol@vargas.com", PasswordHash = PasswordService.HashDeterministico("SinRol123!", "sinrol-vargas"), RolId = null, Activo = true }
+            new Usuario { Id = 3, Nombre = "Usuario sin rol", Email = "sinrol@vargas.com", PasswordHash = PasswordService.HashDeterministico("SinRol123!", "sinrol-vargas"), RolId = null, Activo = true },
+            // Cuenta global para gestionar todas las empresas. Su ambito real es
+            // la membresia con rol 4 y empresa nula (ver UsuarioRolConfiguration).
+            new Usuario { Id = 9, Nombre = "Superadmin", Email = "superadmin@vargas.com", PasswordHash = PasswordService.HashDeterministico("SuperAdmin123!", "superadmin-vargas"), RolId = 4, Activo = true }
         );
     }
 }
